@@ -1,3 +1,4 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend_daktmt/custom_card.dart';
 import 'package:frontend_daktmt/pages/home/widget/chart.dart';
@@ -6,10 +7,14 @@ import 'package:frontend_daktmt/pages/home/widget/toggle.dart';
 import 'package:frontend_daktmt/responsive.dart';
 import 'package:frontend_daktmt/nav_bar/nav_bar_left.dart';
 import 'package:frontend_daktmt/nav_bar/nav_bar_right.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'widget/gauge.dart';
-import 'package:frontend_daktmt/apis/api_server.dart';
+import 'package:frontend_daktmt/apis/api_widget.dart';
 import 'package:frontend_daktmt/pages/noitification/noitification.dart';
+import 'package:logger/logger.dart';
+
+final Logger logger = Logger();
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,38 +27,50 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   double humidity = 0.0;
   double temperature = 0.0;
+  double latitude = 0.0;
+  double longitude = 0.0;
+  String token = "";
+
+  List<FlSpot> humiditySpots = [];
+  List<String> dates = []; // Danh sách để lưu date
+  bool loading = true;
+
   @override
   void initState() {
     super.initState();
     fetchSensorData();
   }
 
-// Function to fetch sensor data
+// Function to fetch sensor dat
   Future<void> fetchSensorData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      String? token = prefs.getString('accessToken');
+      token = prefs.getString('accessToken')!;
 
       double humidityData = 0.00;
       double temperatureData = 0.00;
-
-      if (token == null || token.isEmpty) {
-        print('Access Token không tồn tại.');
+      double fetchedLatitude = latitude;
+      double fetchedLongitude = longitude;
+      if (token.isEmpty) {
+        logger.e('Non Access Token.');
       } else {
-        // Fetch humidity data
         humidityData = await fetchHumidityData(token);
-
-        // Fetch temperature data
         temperatureData = await fetchTemperatureData(token);
+        LatLng locationA = await fetchLocationData(token);
+
+        fetchedLatitude = locationA.latitude;
+        fetchedLongitude = locationA.longitude;
       }
 
       // Cập nhật trạng thái
       setState(() {
         humidity = humidityData; // Sử dụng '0' nếu không có giá trị
-        temperature = temperatureData; // Sử dụng '0' nếu không có giá trị
+        temperature = temperatureData;
+        latitude = fetchedLatitude; // Update latitude with fetched value
+        longitude = fetchedLongitude;
       });
     } catch (error) {
-      print("Error fetching sensor data: $error");
+      logger.e("Error fetching sensor data: $error");
     }
   }
 
@@ -63,12 +80,14 @@ class _HomeScreenState extends State<HomeScreen> {
     final isDesktop = Responsive.isDesktop(context);
     final double gaugeHeight = isMobile ? 200.0 : 150.0;
     final double gaugeWidth = isMobile ? double.infinity : 100.0;
-
     final bool isRowLayout = isDesktop;
+
+   
+
 
     return Scaffold(
       drawer: const Navbar_left(),
-      endDrawer: const Navbar_right(),
+      endDrawer: const Navbar_right(profileData: {},),
       body: SingleChildScrollView(
         child: Stack(
           children: [
@@ -82,29 +101,19 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           Padding(
                             padding: const EdgeInsets.fromLTRB(10, 10, 0, 10),
-                            child: Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius:
-                                      BorderRadius.circular(17), // Bo góc ở đây
-                                ),
+                            child: SizedBox(
                                 width: 300,
-                                height: MediaQuery.of(context)
-                                    .size
-                                    .height, // Sửa chiều cao ở đây
-
+                                height: MediaQuery.of(context).size.height,
                                 child: const Navbar_left()),
                           ),
                           const Padding(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 10), // Thêm khoảng cách 2 bên
+                            padding: EdgeInsets.symmetric(horizontal: 10),
                             child: VerticalDivider(
-                              width: 1, // Độ rộng tổng của VerticalDivider
-                              thickness: 2, // Độ dày của đường thẳng
-                              color: Color.fromARGB(
-                                  255, 255, 255, 255), // Màu của divider
-                              indent: 20, // Khoảng cách từ trên
-                              endIndent: 20, // Khoảng cách từ dưới
+                              width: 1,
+                              thickness: 2,
+                              color: Color.fromARGB(255, 202, 202, 202),
+                              indent: 20,
+                              endIndent: 20,
                             ),
                           ),
                           Expanded(
@@ -121,19 +130,27 @@ class _HomeScreenState extends State<HomeScreen> {
                                         children: [
                                           Row(
                                             children: [
-                                              const Expanded(
+                                              Expanded(
                                                 flex: 3,
                                                 child: Column(
                                                   children: [
-                                                    toggle(
+                                                    const toggle(
                                                       toggleHeight: 150.0,
                                                       toggleWidth: 1000.0,
                                                       numOfRelay: 6,
                                                     ),
-                                                    map(
-                                                      mapHeight: 350.0,
-                                                      mapWidth: 1000,
-                                                    ),
+                                                    latitude == 0.0 &&
+                                                            longitude == 0.0
+                                                        ? const Center(
+                                                            child:
+                                                                CircularProgressIndicator())
+                                                        : map(
+                                                            mapHeight: 350.0,
+                                                            mapWidth: 1000,
+                                                            latitude: latitude,
+                                                            longitude:
+                                                                longitude,
+                                                          ),
                                                   ],
                                                 ),
                                               ),
@@ -162,16 +179,20 @@ class _HomeScreenState extends State<HomeScreen> {
                                           Row(
                                             children: [
                                               Expanded(
-                                                child: TempChart(
+                                                child: Chart(
                                                   gaugeHeight: 200.0,
-                                                  gaugeWidth: 80.0,
+                                                  gaugeWidth: 200.0,
+                                                  token: token,
+                                                  label: 'Temperature',
                                                 ),
                                               ),
                                               const SizedBox(width: 10),
                                               Expanded(
-                                                child: HumiChart(
+                                                child: Chart(
                                                   gaugeHeight: 200.0,
-                                                  gaugeWidth: 2000.0,
+                                                  gaugeWidth: 200.0,
+                                                  token: token,
+                                                  label: 'Humidity',
                                                 ),
                                               ),
                                             ],
@@ -188,7 +209,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       )
                     : Column(
                         children: [
-                          const SizedBox(height: 80.0),
+                          const SizedBox(height: 90.0),
                           const toggle(
                             toggleHeight: 270.0,
                             toggleWidth: 350.0,
@@ -219,18 +240,28 @@ class _HomeScreenState extends State<HomeScreen> {
                                   value: humidity,
                                 ),
                                 const SizedBox(height: 20),
-                                map(
-                                    mapHeight: gaugeHeight,
-                                    mapWidth: gaugeWidth),
+                                latitude == 0.0 && longitude == 0.0
+                                    ? const Center(
+                                        child: CircularProgressIndicator())
+                                    : map(
+                                        mapHeight: 350.0,
+                                        mapWidth: 1000,
+                                        latitude: latitude,
+                                        longitude: longitude,
+                                      ),
                                 const SizedBox(height: 20),
-                                HumiChart(
+                                Chart(
                                   gaugeHeight: gaugeHeight,
                                   gaugeWidth: gaugeWidth,
+                                  token: token,
+                                  label: 'Humidity',
                                 ),
                                 const SizedBox(height: 20),
-                                TempChart(
+                                Chart(
                                   gaugeHeight: gaugeHeight,
                                   gaugeWidth: gaugeWidth,
+                                  token: token,
+                                  label: 'Temperature',
                                 ),
                               ],
                             ),

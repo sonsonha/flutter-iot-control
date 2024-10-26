@@ -6,23 +6,33 @@ import 'package:frontend_daktmt/custom_card.dart';
 
 // ignore: camel_case_types
 class map extends StatefulWidget {
-  const map({super.key, required this.mapHeight, required this.mapWidth});
+  const map({
+    super.key,
+    required this.mapHeight,
+    required this.mapWidth,
+    required this.latitude,
+    required this.longitude,
+  });
 
   final double mapHeight;
   final double mapWidth;
+  final double latitude;
+  final double longitude;
 
   @override
+  // ignore: library_private_types_in_public_api
   _mapState createState() => _mapState();
 }
 
+// ignore: camel_case_types
 class _mapState extends State<map> {
   LatLng? _deviceLocation;
-  final LatLng _locationA =
-      const LatLng(10.880336572604842, 106.80479553251045); // Vị trí A
+  late final LatLng _locationA;
 
   @override
   void initState() {
     super.initState();
+    _locationA = LatLng(widget.latitude, widget.longitude);
     _requestLocationPermission(); // Yêu cầu quyền truy cập vị trí ngay khi khởi tạo
   }
 
@@ -33,8 +43,9 @@ class _mapState extends State<map> {
     // Kiểm tra xem dịch vụ định vị có được bật không
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Dịch vụ định vị chưa bật.')),
+        const SnackBar(content: Text('Location services are not turned on.')),
       );
       return;
     }
@@ -44,17 +55,19 @@ class _mapState extends State<map> {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
+        // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Quyền truy cập vị trí đã bị từ chối.')),
+          const SnackBar(content: Text('Location access has been denied.')),
         );
         return;
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Quyền truy cập vị trí bị từ chối vĩnh viễn.')),
+            content: Text('The location access is permanently denied.')),
       );
       return;
     }
@@ -69,8 +82,9 @@ class _mapState extends State<map> {
         _deviceLocation = LatLng(position.latitude, position.longitude);
       });
     } catch (e) {
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Không thể lấy vị trí: $e')),
+        SnackBar(content: Text('Unable to get a location: $e')),
       );
     }
   }
@@ -83,8 +97,7 @@ class _mapState extends State<map> {
         width: widget.mapWidth,
         child: FlutterMap(
           options: MapOptions(
-            initialCenter: _deviceLocation ??
-                _locationA, // Trung tâm là vị trí của thiết bị nếu có
+            initialCenter: _deviceLocation ?? _locationA, 
             initialZoom: 15,
           ),
           children: [

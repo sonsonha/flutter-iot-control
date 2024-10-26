@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:frontend_daktmt/apis/api_widget.dart'; // For environment variables
+import 'package:frontend_daktmt/custom_card.dart';
 import 'package:frontend_daktmt/nav_bar/nav_bar_left.dart';
+import 'package:frontend_daktmt/responsive.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -12,7 +16,7 @@ class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen> {
   DateTime? _startDate;
   DateTime? _endDate;
-
+  List<Map<String, dynamic>> _historyData = [];
   // Hàm để chọn ngày
   Future<void> _selectDate(BuildContext context, bool isStart) async {
     final DateTime? picked = await showDatePicker(
@@ -33,12 +37,33 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   // Hàm tìm kiếm (giả định)
-  void _search() {
+  void _search() async {
     if (_startDate != null && _endDate != null) {
-      // Thực hiện tìm kiếm với khoảng thời gian được chọn
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('${_startDate.toString()} >>-->> ${_endDate.toString()}'),
-      ));
+      final prefs = await SharedPreferences.getInstance();
+      var token = prefs.getString(
+          'accessToken')!; // Replace with your actual token fetching logic
+
+      try {
+        // Fetch data based on the selected dates
+        List<Map<String, dynamic>> data =
+            await fetchhistorydata(token, _startDate!, _endDate!);
+
+        // Update the state to store the fetched history data
+        setState(() {
+          _historyData = data;
+        });
+
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              'Data fetched for: ${_startDate.toString()} to ${_endDate.toString()}'),
+        ));
+      } catch (error) {
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Error fetching data: $error'),
+        ));
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a time period!')),
@@ -48,14 +73,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = Responsive.isDesktop(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return Scaffold(
       resizeToAvoidBottomInset: false,
       drawer: const Navbar_left(),
       appBar: AppBar(
         title: const Text('History'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: Container(
+        decoration: backgound_Color(),
+        padding: isDesktop
+            ? EdgeInsets.fromLTRB(screenWidth * 0.2, 10, screenWidth * 0.2, 10)
+            : const EdgeInsets.fromLTRB(10, 10, 10, 10),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
           decoration: BoxDecoration(
@@ -72,38 +103,81 @@ class _HistoryScreenState extends State<HistoryScreen> {
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Row(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ElevatedButton(
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
                             onPressed: () => _selectDate(context, true),
-                            child: Text(_startDate == null
-                                ? 'Start'
-                                : '${_startDate!.day}/${_startDate!.month}/${_startDate!.year}'),
+                            child: const Text('Start'),
                           ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ElevatedButton(
+                        ),
+                        const SizedBox(width: 8), // Spacing between the buttons
+                        Expanded(
+                          child: ElevatedButton(
                             onPressed: () => _selectDate(context, false),
-                            child: Text(_endDate == null
-                                ? 'End'
-                                : '${_endDate!.day}/${_endDate!.month}/${_endDate!.year}'),
+                            child: const Text('End'),
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(
+                            width: 8), // Spacing before the Search button
+                        ElevatedButton(
+                          onPressed: _search,
+                          child: const Text('Search'),
+                        ),
+                      ],
                     ),
-                    ElevatedButton(
-                      onPressed: _search,
-                      child: const Text('Search'),
+                    const SizedBox(height: 16), // Space between rows
+                    Container(
+                      padding: const EdgeInsets.all(8.0),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                            color: Colors.grey), // Border color and style
+                        borderRadius:
+                            BorderRadius.circular(8.0), // Rounded corners
+                      ),
+                      child: isDesktop
+                          ? Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  _startDate != null
+                                      ? 'Start date: ${_startDate!.day}/${_startDate!.month}/${_startDate!.year}'
+                                      : 'No start date selected',
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                                Text(
+                                  _endDate != null
+                                      ? 'End date: ${_endDate!.day}/${_endDate!.month}/${_endDate!.year}'
+                                      : 'No end date selected',
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                              ],
+                            )
+                          : Center(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _startDate != null
+                                        ? 'Start date: ${_startDate!.day}/${_startDate!.month}/${_startDate!.year}'
+                                        : 'No start date selected',
+                                    style: const TextStyle(fontSize: 16),
+                                  ),
+                                  const SizedBox(
+                                      height: 8), // Space between date texts
+                                  Text(
+                                    _endDate != null
+                                        ? 'End date: ${_endDate!.day}/${_endDate!.month}/${_endDate!.year}'
+                                        : 'No end date selected',
+                                    style: const TextStyle(fontSize: 16),
+                                  ),
+                                ],
+                              ),
+                            ),
                     ),
                   ],
                 ),
@@ -111,16 +185,43 @@ class _HistoryScreenState extends State<HistoryScreen> {
               const Divider(),
               Expanded(
                 child: ListView.builder(
-                  itemCount: 20, // Giả định có 20 lịch sử
+                  itemCount: _historyData.length, // Use the fetched data
                   itemBuilder: (context, index) {
+                    final historyItem =
+                        _historyData[index]; // Access each history record
                     return ListTile(
                       leading: const Icon(Icons.history),
-                      title: Text('#${index + 1}'),// cho các giá trị thay đổi
-                      subtitle: Text('${DateTime.now().subtract(Duration(days: index))}'),
+                      title: isDesktop
+                          ? Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  historyItem['Date'] != null
+                                      ? DateTime.parse(historyItem['Date'])
+                                          .toLocal()
+                                          .toString() // Parse and format the date
+                                      : 'No date',
+                                ),
+                                Text(historyItem['activity'] ?? 'No activity'),
+                              ],
+                            )
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(historyItem['activity'] ?? 'No activity'),
+                                Text(
+                                  historyItem['Date'] != null
+                                      ? DateTime.parse(historyItem['Date'])
+                                          .toLocal()
+                                          .toString() // Parse and format the date
+                                      : 'No date',
+                                ),
+                              ],
+                            ),
                     );
                   },
                 ),
-              ),
+              )
             ],
           ),
         ),

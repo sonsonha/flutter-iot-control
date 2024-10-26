@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend_daktmt/apis/api_widget.dart';
 import 'package:frontend_daktmt/responsive.dart';
 
 // ignore: camel_case_types
@@ -14,18 +15,22 @@ class navbarleft_set extends StatelessWidget {
 
     return isMobile
         ? Positioned(
-            top: 30,
+            top: 35,
             left: 5,
             child: Builder(
               builder: (context) => IconButton(
-                icon: const Icon(Icons.menu, color: Colors.white),
+                icon: const Icon(
+                  Icons.menu,
+                  color: Colors.white,
+                  size: 35.0,
+                ),
                 onPressed: () {
                   Scaffold.of(context).openDrawer();
                 },
               ),
             ),
           )
-        : const SizedBox(); 
+        : const SizedBox();
   }
 }
 
@@ -38,7 +43,7 @@ class Navbar_left extends StatelessWidget {
     return Drawer(
       child: Padding(
         // Thêm Padding vào đây
-        padding: const EdgeInsets.only(top: 40.0), 
+        padding: const EdgeInsets.only(top: 40.0),
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
@@ -80,15 +85,31 @@ class Navbar_left extends StatelessWidget {
                 }),
             const Divider(),
             ListTile(
-                leading: const Icon(Icons.logout, color: Colors.red),
-                title: const Text(
-                  'Sign Out',
-                  style: TextStyle(
-                    color: Colors.red,
-                  ),
+              leading: const Icon(Icons.logout, color: Colors.red),
+              title: const Text(
+                'Sign Out',
+                style: TextStyle(
+                  color: Colors.red,
                 ),
-                // ignore: avoid_print
-                onTap: () => print('Logout tapped')),
+              ),
+              onTap: () async {
+                final authService = apilogout(); // Khởi tạo AuthService
+                bool success =
+                    await authService.logoutUser(); // Gọi phương thức đăng xuất
+
+                if (success) {
+                  // Nếu đăng xuất thành công, chuyển hướng đến trang đăng nhập
+                  // ignore: use_build_context_synchronously
+                  Navigator.pushReplacementNamed(context, '/signin');
+                } else {
+                  // Thông báo lỗi nếu không thành công
+                  // ignore: use_build_context_synchronously
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Đăng xuất không thành công')),
+                  );
+                }
+              },
+            ),
           ],
         ),
       ),

@@ -9,26 +9,26 @@ class noitification_setting extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // final isMobile = Responsive.isMobile(context);
     final isDesktop = Responsive.isDesktop(context);
     final bool isRowLayout = isDesktop;
 
     return Positioned(
-      top: isRowLayout ? 15 : 30,
-      right: isRowLayout ? 170 : 55,
+      top: isRowLayout ? 15 : 40,
+      right: isRowLayout ? 220 : 70,
       child: Builder(
-        builder: (context) => IconButton(
-          icon: const Icon(Icons.notifications, color: Colors.white),
-          onPressed: () {
+        builder: (context) => GestureDetector(
+          onTap: () {
             showDialog(
               context: context,
-              barrierColor: Colors.transparent, // Để nền không bị tối
+              barrierColor: Colors.transparent, 
               builder: (BuildContext context) {
                 return Align(
                   alignment: Alignment.centerRight,
                   child: Container(
                     height: MediaQuery.of(context).size.height * 0.8,
-                    width: isRowLayout ? 300 : MediaQuery.of(context).size.width * 0.9,
+                    width: isRowLayout
+                        ? 300
+                        : MediaQuery.of(context).size.width * 0.9,
                     margin: const EdgeInsets.only(top: 16, right: 16),
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -46,7 +46,7 @@ class noitification_setting extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          'Noitifications',
+                          'Notifications',
                           style: TextStyle(
                               fontSize: 20, fontWeight: FontWeight.bold),
                         ),
@@ -60,9 +60,26 @@ class noitification_setting extends StatelessWidget {
               },
             );
           },
+          child: Container(
+            padding: const EdgeInsets.all(8.0),
+            decoration: BoxDecoration(
+              color: const Color.fromARGB(0, 255, 255, 255).withOpacity(0.8), // Màu nền cho box
+              borderRadius: BorderRadius.circular(50), // Bo góc box
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 5.0,
+                  offset: Offset(0, 3),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.notifications,
+              color: Color.fromARGB(255, 0, 0, 0), // Màu icon
+            ),
+          ),
         ),
       ),
     );
   }
 }
-

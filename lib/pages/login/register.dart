@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:frontend_daktmt/custom_card.dart';
 import 'package:frontend_daktmt/extensions/string_extensions.dart';
+import 'package:frontend_daktmt/responsive.dart';
 
-import '../../apis/apis.dart';
+import '../../apis/apis_login.dart';
 
 class Register extends StatefulWidget {
   const Register({super.key});
@@ -61,8 +63,16 @@ class _RegisterState extends State<Register> {
     );
 
     if (isSuccess) {
-      isSuccess = await fetchRegister(_username, _emailController,
-          _passwordController_1, _aiouser, _aiokey, _phone, context);
+      isSuccess = await fetchRegister(
+          _username,
+          _emailController,
+          // ignore: use_build_context_synchronously
+          _passwordController_1,
+          _aiouser,
+          _aiokey,
+          _phone,
+          // ignore: use_build_context_synchronously
+          context);
 
       if (!isSuccess) {
         setState(() {
@@ -103,19 +113,19 @@ class _RegisterState extends State<Register> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = Responsive.isMobile(context);
+    final bool isRowLayout = isMobile;
+
+    final screenWidth = MediaQuery.of(context).size.width;
     return Scaffold(
       body: Stack(
         children: [
           Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xffB81736), Color(0xff281537)],
-              ),
-            ),
-            padding: const EdgeInsets.only(top: 60.0, left: 22),
+            decoration: backgound_Color(),
+            padding: EdgeInsets.only(top: 20.0, left: isRowLayout ? 55 : 222),
             alignment: Alignment.topLeft,
             child: const Text(
-              'Hello\nRegister!',
+              'Register!',
               style: TextStyle(
                 fontSize: 30,
                 color: Colors.white,
@@ -124,13 +134,11 @@ class _RegisterState extends State<Register> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.only(top: 200.0),
+            padding: EdgeInsets.fromLTRB(
+                screenWidth * 0.3, 200, screenWidth * 0.3, 100),
             child: Container(
-              decoration: const BoxDecoration(
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(40),
-                  topRight: Radius.circular(40),
-                ),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(22),
                 color: Colors.white,
               ),
               padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -143,7 +151,7 @@ class _RegisterState extends State<Register> {
                       child: Text(
                         _errorMessage!,
                         style: const TextStyle(
-                          color: Colors.red,
+                          color: Color.fromARGB(255, 255, 0, 0),
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -165,7 +173,7 @@ class _RegisterState extends State<Register> {
                           'Email',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: Color(0xffB81736),
+                            color: Color.fromARGB(255, 0, 0, 0),
                           ),
                         ),
                       ),
@@ -195,7 +203,7 @@ class _RegisterState extends State<Register> {
                       'Enter the verification code sent to your email',
                       style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: Color(0xffB81736)),
+                          color: Color.fromARGB(255, 0, 132, 255)),
                     ),
                     const SizedBox(height: 10),
                     Row(
@@ -241,8 +249,8 @@ class _RegisterState extends State<Register> {
                                 borderRadius: BorderRadius.circular(30),
                                 gradient: const LinearGradient(
                                   colors: [
-                                    Color(0xffB81736),
-                                    Color(0xff281537)
+                                    Color.fromARGB(255, 0, 132, 255),
+                                    Color.fromARGB(94, 73, 158, 255)
                                   ],
                                 ),
                               ),
@@ -278,7 +286,7 @@ class _RegisterState extends State<Register> {
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 17,
-                            color: Color(0xff281537),
+                            color: Color.fromARGB(255, 0, 47, 255),
                           ),
                         ),
                       ),
@@ -289,7 +297,7 @@ class _RegisterState extends State<Register> {
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 17,
-                            color: Color(0xff281537),
+                            color: Color.fromARGB(255, 0, 47, 255),
                           ),
                         ),
                       ),
@@ -349,7 +357,10 @@ class _RegisterState extends State<Register> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(30),
             gradient: const LinearGradient(
-              colors: [Color(0xffB81736), Color(0xff281537)],
+              colors: [
+                Color.fromARGB(255, 252, 201, 201),
+                Color.fromARGB(255, 148, 59, 216)
+              ],
             ),
           ),
           child: Container(
@@ -370,7 +381,7 @@ class _RegisterState extends State<Register> {
 
   Widget _buildSignUpButton_2(BuildContext context) {
     return SizedBox(
-      width: double.infinity,
+      width: 100,
       height: 55,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
@@ -386,7 +397,7 @@ class _RegisterState extends State<Register> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(30),
             gradient: const LinearGradient(
-              colors: [Color(0xffB81736), Color(0xff281537)],
+              colors: [Color.fromARGB(255, 3, 3, 3), Color(0xff281537)],
             ),
           ),
           child: Container(
@@ -416,7 +427,7 @@ class _RegisterState extends State<Register> {
           label,
           style: const TextStyle(
             fontWeight: FontWeight.bold,
-            color: Color(0xffB81736),
+            color: Color.fromARGB(255, 0, 0, 0),
           ),
         ),
       ),
@@ -435,13 +446,13 @@ class _RegisterState extends State<Register> {
           label,
           style: const TextStyle(
             fontWeight: FontWeight.bold,
-            color: Color(0xffB81736),
+            color: Color.fromARGB(255, 0, 0, 0),
           ),
         ),
         suffixIcon: IconButton(
           icon: Icon(
             _passwordVisible ? Icons.visibility : Icons.visibility_off,
-            color: const Color(0xffB81736),
+            color: const Color.fromARGB(255, 30, 255, 0),
           ),
           onPressed: () {
             setState(() {

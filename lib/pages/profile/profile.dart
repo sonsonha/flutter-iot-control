@@ -1,136 +1,259 @@
 import 'package:flutter/material.dart';
+import 'package:frontend_daktmt/custom_card.dart';
 import 'package:frontend_daktmt/nav_bar/nav_bar_left.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:frontend_daktmt/apis/api_widget.dart'; // Để sử dụng API_BASE_URL
+import 'dart:convert';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
   @override
+  // ignore: library_private_types_in_public_api
   _ProfileScreenState createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  // Biến để lưu trữ thông tin người dùng
-  String username = 'Username';
-  String email = 'user@example.com';
-  String phone = '0123456789';
-  String address = '123 Main St';
-  // String username = 'Username';
-  // String email = 'user@example.com';
-  // String phone = '0123456789';
-  // String address = '123 Main St';
-  
-  
-  
-
-  // Biến để kiểm soát trạng thái chỉnh sửa
-  bool isEditing = false;
-
-  // TextEditingControllers cho các trường thông tin
-  final TextEditingController usernameController = TextEditingController();
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController phoneController = TextEditingController();
-  final TextEditingController addressController = TextEditingController();
+  Map<String, dynamic>? _profileData;
 
   @override
   void initState() {
     super.initState();
-    // Khởi tạo các TextEditingControllers với giá trị ban đầu
-    usernameController.text = username;
-    emailController.text = email;
-    phoneController.text = phone;
-    addressController.text = address;
+    _loadProfile();
   }
 
-  void _toggleEdit() {
+  Future<void> _loadProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    var token = prefs.getString(
+        'accessToken')!; // Replace with your actual token fetching logic
+
+    try {
+      Map<String, dynamic> data = await fetchProfileData(token);
+      setState(() {
+        _profileData = data;
+      });
+    } catch (error) {
+      // ignore: use_build_context_synchronously
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Error fetching profile: $error'),
+      ));
+    }
+  }
+
+  void _showEditDialog() {
+    final TextEditingController usernameController =
+        TextEditingController(text: _profileData!['username']);
+    final TextEditingController emailController =
+        TextEditingController(text: _profileData!['email']);
+    final TextEditingController phoneController =
+        TextEditingController(text: _profileData!['phone_number']);
+    final TextEditingController aioController =
+        TextEditingController(text: _profileData!['AIO_USERNAME']);
+    final TextEditingController aiokeyController =
+        TextEditingController(text: _profileData!['AIO_KEY']);
+    final TextEditingController wsvController =
+        TextEditingController(text: _profileData!['webServerIp']);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Edit Profile'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: usernameController,
+                decoration: const InputDecoration(labelText: 'Username'),
+              ),
+              TextField(
+                controller: emailController,
+                decoration: const InputDecoration(labelText: 'Email'),
+              ),
+              TextField(
+                controller: phoneController,
+                decoration: const InputDecoration(labelText: 'Phone'),
+              ),
+              TextField(
+                controller: aioController,
+                decoration: const InputDecoration(labelText: 'AIO Username'),
+              ),
+              TextField(
+                controller: aiokeyController,
+                decoration: const InputDecoration(labelText: 'AIO Key'),
+              ),
+              TextField(
+                controller: wsvController,
+                decoration: const InputDecoration(labelText: 'Web Server IP'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                // Gọi API cập nhật thông tin nếu cần thiết
+                _updateProfile(
+                  username: usernameController.text,
+                  email: emailController.text,
+                  phone: phoneController.text,
+                  aio: aioController.text,
+                  aiokey: aiokeyController.text,
+                  wsv: wsvController.text,
+                );
+                Navigator.of(context).pop();
+              },
+              child: const Text('Save'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Cancel'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _updateProfile(
+      {required String username,
+      required String email,
+      required String phone,
+      required String aio,
+      required String aiokey,
+      required String wsv}) async {
+    // Cập nhật _profileData
     setState(() {
-      isEditing = !isEditing;
-      if (!isEditing) {
-        // Nếu không còn chỉnh sửa, cập nhật thông tin người dùng
-        username = usernameController.text;
-        email = emailController.text;
-        phone = phoneController.text;
-        address = addressController.text;
-      }
+      _profileData!['username'] = username;
+      _profileData!['email'] = email;
+      _profileData!['phone_number'] = phone;
+      _profileData!['AIO_USERNAME'] = aio;
+      _profileData!['AIO_KEY'] = aiokey;
+      _profileData!['webServerIp'] = wsv;
     });
+
+    // Gọi API để cập nhật thông tin người dùng nếu cần
+    // await updateProfileData(token, username, email, phone);
   }
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
     return Scaffold(
-      resizeToAvoidBottomInset: false,
       drawer: const Navbar_left(),
       appBar: AppBar(
         title: const Text('Profile'),
         actions: [
           IconButton(
-            icon: Icon(isEditing ? Icons.save : Icons.edit),
-            onPressed: _toggleEdit,
+            icon: const Icon(Icons.edit),
+            onPressed: _showEditDialog,
           ),
         ],
       ),
-      body: Padding(
+      body: Container(
+        decoration: backgound_Color(),
+        padding: EdgeInsets.only(
+            top: 20, left: screenWidth * 0.25, right: screenWidth * 0.25),
+        child: _profileData == null
+            ? const Center(child: CircularProgressIndicator())
+            : ListView(
+                children: [
+                  _buildProfileCard(),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Widget _buildProfileCard() {
+    return Card(
+      elevation: 5.0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10.0),
+      ),
+      child: Container(
         padding: const EdgeInsets.all(16.0),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
-          decoration: BoxDecoration(
-            color: Colors.white, // Màu nền cho box
-            borderRadius: BorderRadius.circular(8.0), // Bo góc 8 đơn vị
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black12, // Màu bóng đổ
-                blurRadius: 6.0, // Độ mờ của bóng
-                offset: Offset(0, 3), // Độ lệch của bóng
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              // Ảnh bìa
-              Container(
-                height: 150,
-                decoration: const BoxDecoration(
-                  image: DecorationImage(
-                    image: NetworkImage('https://i0.wp.com/cdn.vietgame.asia/wp-content/uploads/20160316232806/Gundam-Extreme-Vs-Force-Danh-Gia-Game-1.jpg?fit=1920%2C870&ssl=1'), // Thay bằng URL ảnh bìa
-                    fit: BoxFit.cover,
+        child: Column(
+          children: [
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10.0),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    image: _profileData!['coverPhoto'] != null &&
+                            _profileData!['coverPhoto']['data'] != null
+                        ? DecorationImage(
+                            image: MemoryImage(base64Decode(
+                                _profileData!['coverPhoto']['data'])),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(8.0),
-                    topRight: Radius.circular(8.0),
-                  ),
+                  width: MediaQuery.of(context).size.width,
+                  height: MediaQuery.of(context).size.height * 0.2,
                 ),
+                CircleAvatar(
+                  radius: 50,
+                  backgroundImage: _profileData!['avatar'] != null &&
+                          _profileData!['avatar']['data'] != null
+                      ? MemoryImage(
+                          base64Decode(_profileData!['avatar']['data']))
+                      : null,
+                  backgroundColor: Colors.blueAccent,
+                  child: _profileData!['avatar'] == null ||
+                          _profileData!['avatar']['data'] == null
+                      ? Text(
+                          _profileData!['username'][0].toUpperCase(),
+                          style: const TextStyle(
+                              fontSize: 40, color: Colors.white),
+                        )
+                      : null,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16.0),
+            Text(
+              _profileData!['fullname'],
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
               ),
-              const SizedBox(height: 16),
-              // Avatar
-              const CircleAvatar(
-                radius: 50,
-                backgroundImage: NetworkImage('assets/hcmut.png'), 
+            ),
+            const SizedBox(height: 8.0),
+            Text(
+              _profileData!['webServerIp'],
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
               ),
-              const SizedBox(height: 16),
-              // Thông tin người dùng
-              TextField(
-                controller: usernameController,
-                readOnly: !isEditing,
-                decoration: const InputDecoration(labelText: 'Username'),
-              ),
-              TextField(
-                controller: emailController,
-                readOnly: !isEditing,
-                decoration: const InputDecoration(labelText: 'Email'),
-              ),
-              TextField(
-                controller: phoneController,
-                readOnly: !isEditing,
-                decoration: const InputDecoration(labelText: 'Phone'),
-              ),
-              TextField(
-                controller: addressController,
-                readOnly: !isEditing,
-                decoration: const InputDecoration(labelText: 'Address'),
-              ),
-            ],
-          ),
+            ),
+            const Divider(height: 30),
+            _buildProfileItem(
+                Icons.person, 'Username', _profileData!['username']),
+            _buildProfileItem(Icons.email, 'Email', _profileData!['email']),
+            _buildProfileItem(Icons.password, 'Password', '**** ****'),
+            _buildProfileItem(
+                Icons.phone, 'Phone', _profileData!['phone_number']),
+            _buildProfileItem(
+                Icons.lock, 'AIO Username', _profileData!['AIO_USERNAME']),
+            _buildProfileItem(
+                Icons.vpn_key, 'AIO Key', _profileData!['AIO_KEY']),
+            _buildProfileItem(
+                Icons.computer, 'Web Server IP', _profileData!['webServerIp']),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _buildProfileItem(IconData icon, String title, String value) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.blueAccent),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+      subtitle: Text(value),
     );
   }
 }

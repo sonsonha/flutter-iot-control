@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:frontend_daktmt/custom_card.dart';
 import 'package:frontend_daktmt/extensions/string_extensions.dart';
+import 'package:frontend_daktmt/responsive.dart';
 
-import '../../apis/apis.dart';
+import '../../apis/apis_login.dart';
 
 class Forget extends StatefulWidget {
   const Forget({super.key});
@@ -56,6 +58,13 @@ class _ForgetState extends State<Forget> {
       });
       return;
     }
+
+    if (_passwordController_1.text.length < 8) {
+      setState(() {
+        _errorMessage = 'Mật khẩu phải có ít nhất 8 ký tự';
+      });
+      return;
+    }
     bool isSuccess = await fetchConfirmcode(
       _emailController.text,
       _code.text,
@@ -63,7 +72,11 @@ class _ForgetState extends State<Forget> {
 
     if (isSuccess) {
       isSuccess = await fetchForgetPassword(
-          _emailController, _passwordController_1, context);
+          // ignore: use_build_context_synchronously
+          _emailController,
+          _passwordController_1,
+          // ignore: use_build_context_synchronously
+          context);
 
       if (!isSuccess) {
         setState(() {
@@ -107,19 +120,20 @@ class _ForgetState extends State<Forget> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = Responsive.isMobile(context);
+    final bool isRowLayout = isMobile;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return Scaffold(
       body: Stack(
         children: [
           Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xffB81736), Color(0xff281537)],
-              ),
-            ),
-            padding: const EdgeInsets.only(top: 60.0, left: 22),
+            decoration: backgound_Color(),
+            padding: EdgeInsets.only(top: 20.0, left: isRowLayout ? 55 : 222),
             alignment: Alignment.topLeft,
             child: const Text(
-              'Hello\nForget password!',
+              'Forget password!',
               style: TextStyle(
                 fontSize: 30,
                 color: Colors.white,
@@ -128,16 +142,14 @@ class _ForgetState extends State<Forget> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.only(top: 200.0),
+            padding: EdgeInsets.fromLTRB(
+                screenWidth * 0.3, 200, screenWidth * 0.3, 100),
             child: Container(
-              decoration: const BoxDecoration(
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(40),
-                  topRight: Radius.circular(40),
-                ),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(22),
                 color: Colors.white,
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 18),
+              padding: const EdgeInsets.symmetric(horizontal: 40),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -166,7 +178,7 @@ class _ForgetState extends State<Forget> {
                           'Email',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: Color(0xffB81736),
+                            color: Color.fromARGB(255, 3, 3, 3),
                           ),
                         ),
                       ),
@@ -182,7 +194,7 @@ class _ForgetState extends State<Forget> {
                       'Enter the verification code sent to your email',
                       style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: Color(0xffB81736)),
+                          color: Color.fromARGB(255, 0, 17, 255)),
                     ),
                     const SizedBox(height: 10),
                     Row(
@@ -196,7 +208,7 @@ class _ForgetState extends State<Forget> {
                                 'Verification Code',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xffB81736),
+                                  color: Color.fromARGB(255, 0, 0, 0),
                                 ),
                               ),
                             ),
@@ -228,8 +240,8 @@ class _ForgetState extends State<Forget> {
                                 borderRadius: BorderRadius.circular(30),
                                 gradient: const LinearGradient(
                                   colors: [
-                                    Color(0xffB81736),
-                                    Color(0xff281537)
+                                    Color.fromARGB(255, 0, 102, 255),
+                                    Color.fromARGB(144, 0, 38, 255)
                                   ],
                                 ),
                               ),
@@ -262,33 +274,50 @@ class _ForgetState extends State<Forget> {
                     const SizedBox(height: 20),
                     _buildSignUpButton_2(context),
                   ],
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      GestureDetector(
-                        onTap: () => _handleSignInClick(context),
-                        child: const Text(
-                          'Sign in',
+                  SizedBox(height: screenHeight * 0.2),
+                  Align(
+                    alignment:
+                        Alignment.bottomCenter, // Aligns to the bottom center
+                    child: Row(
+                      mainAxisAlignment:
+                          MainAxisAlignment.center, // Centers the Row
+                      children: [
+                        GestureDetector(
+                          onTap: () => _handleSignInClick(context),
+                          child: const Text(
+                            'Sign in',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 17,
+                              color: Color.fromARGB(255, 0, 47, 255),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10), // Space between the texts
+                        const Text(
+                          '-', // Dash between the texts
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 17,
                             color: Color(0xff281537),
                           ),
                         ),
-                      ),
-                      GestureDetector(
-                        onTap: () => _handleSignUpClick(context),
-                        child: const Text(
-                          'Sign up',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 17,
-                            color: Color(0xff281537),
+                        const SizedBox(
+                            width:
+                                10), // Space between the dash and the next text
+                        GestureDetector(
+                          onTap: () => _handleSignUpClick(context),
+                          child: const Text(
+                            'Sign up',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 17,
+                              color: Color.fromARGB(255, 0, 47, 255),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -300,55 +329,62 @@ class _ForgetState extends State<Forget> {
   }
 
   Widget _buildSignUpButton_1(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 55,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          padding: EdgeInsets.zero,
-          backgroundColor: Colors.transparent,
-          shadowColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
-          ),
-        ),
-        onPressed: () async {
-          if (_emailController.text.isEmpty) {
-            setState(() {
-              _errorMessage = 'Vui lòng nhập email';
-            });
-            return;
-          }
-
-          if (!_emailController.text.isValidEmail()) {
-            setState(() {
-              _errorMessage = 'Email không đúng định dạng';
-            });
-            return;
-          }
-
-          _sendcode();
-        },
-        child: Ink(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(30),
-            gradient: const LinearGradient(
-              colors: [Color(0xffB81736), Color(0xff281537)],
+    return Row(
+      mainAxisAlignment:
+          MainAxisAlignment.end, // Aligns the button to the right
+      children: [
+        SizedBox(
+          width: 202,
+          height: 57,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              padding: EdgeInsets.zero,
+              backgroundColor: Colors.transparent,
+              shadowColor: Colors.transparent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30),
+              ),
             ),
-          ),
-          child: Container(
-            alignment: Alignment.center,
-            child: const Text(
-              'Next',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+            onPressed: () async {
+              if (_emailController.text.isEmpty) {
+                setState(() {
+                  _errorMessage = 'Please enter your email';
+                });
+                return;
+              }
+
+              if (!_emailController.text.isValidEmail()) {
+                setState(() {
+                  _errorMessage = 'Emails are not formatted correctly';
+                });
+                return;
+              }
+
+              _sendcode();
+            },
+            child: Ink(
+              width: 200,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(30),
+                gradient: const LinearGradient(
+                  colors: [Color.fromARGB(255, 0, 102, 255), Color(0xff281537)],
+                ),
+              ),
+              child: Container(
+                alignment: Alignment.center,
+                child: const Text(
+                  'Next',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
               ),
             ),
           ),
         ),
-      ),
+      ],
     );
   }
 
@@ -370,7 +406,7 @@ class _ForgetState extends State<Forget> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(30),
             gradient: const LinearGradient(
-              colors: [Color(0xffB81736), Color(0xff281537)],
+              colors: [Color.fromARGB(255, 255, 255, 255), Color(0xff281537)],
             ),
           ),
           child: Container(
@@ -389,6 +425,7 @@ class _ForgetState extends State<Forget> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -400,7 +437,7 @@ class _ForgetState extends State<Forget> {
           label,
           style: const TextStyle(
             fontWeight: FontWeight.bold,
-            color: Color(0xffB81736),
+            color: Color.fromARGB(255, 0, 0, 0),
           ),
         ),
       ),
@@ -420,12 +457,12 @@ class _ForgetState extends State<Forget> {
           labelText: label,
           labelStyle: const TextStyle(
             fontWeight: FontWeight.bold,
-            color: Color(0xffB81736),
+            color: Color.fromARGB(255, 0, 0, 0),
           ),
           suffixIcon: IconButton(
             icon: Icon(
               _passwordVisible ? Icons.visibility : Icons.visibility_off,
-              color: const Color(0xffB81736),
+              color: const Color.fromARGB(255, 0, 0, 0),
             ),
             onPressed: () {
               setState(() {

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:frontend_daktmt/apis/apis.dart';
+import 'package:frontend_daktmt/apis/apis_login.dart';
 import 'package:frontend_daktmt/custom_card.dart';
-import 'package:frontend_daktmt/extensions/string_extensions.dart';
+// import 'package:frontend_daktmt/extensions/string_extensions.dart';
 import 'package:frontend_daktmt/responsive.dart';
+import 'package:logger/logger.dart';
+
+final Logger logger = Logger();
 
 class SignIn extends StatefulWidget {
   const SignIn({super.key});
@@ -19,11 +22,12 @@ class _SignInState extends State<SignIn> {
 
   Future<void> _handleOnClick(BuildContext context) async {
     if (_emailController.text.isNotEmpty &&
-        _passwordController.text.isNotEmpty &&
-        _emailController.text.isValidEmail()) {
+            _passwordController
+                .text.isNotEmpty //&& _emailController.text.isValidEmail()
+        ) {
       bool isSuccess =
           await fetchSignIn(_emailController, _passwordController, context);
-      print('API Response: $isSuccess');
+
       if (!isSuccess) {
         setState(() {
           _errorMessage = 'Login failed. Please try again.';
@@ -34,7 +38,7 @@ class _SignInState extends State<SignIn> {
         });
       }
     } else {
-      print('Emails and passwords should not be left blank.');
+      logger.w('Emails and passwords should not be left blank.');
     }
   }
 
@@ -60,13 +64,38 @@ class _SignInState extends State<SignIn> {
               padding:
                   EdgeInsets.only(top: 120.0, left: isRowLayout ? 55 : 222),
               alignment: Alignment.topLeft,
-              child: const Text(
-                'Welcome to CaCoIot!',
-                style: TextStyle(
-                  fontSize: 30,
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Welcome to CaCoIot!',
+                    style: TextStyle(
+                      fontSize: 30,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(
+                      height: 100), // Khoảng cách giữa các thành phần
+                  Image.asset(
+                    'assets/mylogoBKU.png', // Đường dẫn đến hình ảnh của bạn
+                    width: 400, // Kích thước của hình ảnh
+                    height: 400,
+                  ),
+                  const SizedBox(height: 20),
+                  const Padding(
+                    padding: EdgeInsets.only(
+                        left: 250), // Dịch dòng chữ sang trái 20 pixel
+                    child: Text(
+                      '"Khai phá ,Tiên phong, Sáng tạo"', // Dòng chữ mới
+                      style: TextStyle(
+                        fontSize: 20,
+                        color: Colors.white,
+                        fontStyle: FontStyle.italic, // In nghiêng
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             Align(
@@ -106,15 +135,10 @@ class _SignInState extends State<SignIn> {
                       const SizedBox(height: 25.0),
                       TextField(
                         controller: _emailController,
-                        decoration: InputDecoration(
-                          suffixIcon: Icon(
-                            Icons.check,
-                            color: _emailController.text.isValidEmail()
-                                ? Colors.green
-                                : Colors.grey,
-                          ),
-                          label: const Text(
-                            'Email',
+                        decoration: const InputDecoration(
+                         
+                          label: Text(
+                            'Username or Email',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Color.fromARGB(255, 0, 0, 0),
@@ -154,7 +178,7 @@ class _SignInState extends State<SignIn> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 10),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -213,7 +237,7 @@ class _SignInState extends State<SignIn> {
 
   Widget _buildSignInButton(BuildContext context) {
     return SizedBox(
-      height: 55,
+      height: 40,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
           padding: EdgeInsets.zero,
@@ -259,7 +283,7 @@ class _SignWithGG extends StatelessWidget {
     return ElevatedButton(
       onPressed: () {
         // Xử lý sự kiện khi nhấn vào nút
-        print("Sign in with Google");
+        logger.i("Sign in with Google");
       },
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.white, // Màu nền nút
@@ -292,249 +316,4 @@ class _SignWithGG extends StatelessWidget {
   }
 }
 
-class DividerWithText extends StatelessWidget {
-  const DividerWithText({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return const Row(
-      children: <Widget>[
-        Expanded(
-          child: Divider(
-            thickness: 1, // Độ dày của dòng
-            color: Colors.grey, // Màu của dòng
-            indent: 10.0, // Khoảng cách từ dòng đến cạnh bên trái
-            endIndent: 10.0, // Khoảng cách từ dòng đến chữ "or"
-          ),
-        ),
-        Text("or", style: TextStyle(color: Colors.grey)),
-        Expanded(
-          child: Divider(
-            thickness: 1,
-            color: Colors.grey,
-            indent: 10.0,
-            endIndent: 10.0,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// import 'package:flutter/material.dart';
-// import 'package:frontend_daktmt/apis/apis.dart';
-// import 'package:frontend_daktmt/extensions/string_extensions.dart';
-
-// class SignIn extends StatefulWidget {
-//   const SignIn({super.key});
-
-//   @override
-//   State<SignIn> createState() => _SignInState();
-// }
-
-// class _SignInState extends State<SignIn> {
-//   final TextEditingController _emailController = TextEditingController();
-//   final TextEditingController _passwordController = TextEditingController();
-//   bool _passwordVisible = false;
-//   String? _errorMessage;
-
-//   Future<void> _handleOnClick(BuildContext context) async {
-//     if (_emailController.text.isNotEmpty &&
-//         _passwordController.text.isNotEmpty &&
-//         _emailController.text.isValidEmail()) {
-//       bool isSuccess =
-//           await fetchSignIn(_emailController, _passwordController, context);
-//       if (!isSuccess) {
-//         setState(() {
-//           _errorMessage = 'Đăng nhập không thành công. Vui lòng thử lại.';
-//         });
-//       } else {
-//         setState(() {
-//           _errorMessage = null;
-//         });
-//       }
-//     } else {
-//       print('Email và mật khẩu không được để trống.');
-//     }
-//   }
-
-//   void _handleSignUpClick(BuildContext context) {
-//     Navigator.pushReplacementNamed(context, '/register');
-//   }
-
-//   void _handleForgotPasswordClick(BuildContext context) {
-//     Navigator.pushReplacementNamed(context, '/forget-password');
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       body: Stack(
-//         children: [
-//           Container(
-//             decoration: const BoxDecoration(
-//               gradient: LinearGradient(
-//                 colors: [Color(0xffB81736), Color(0xff281537)],
-//               ),
-//             ),
-//             padding: const EdgeInsets.only(top: 60.0, left: 22),
-//             alignment: Alignment.topLeft,
-//             child: const Text(
-//               'Hello\nSign in!',
-//               style: TextStyle(
-//                 fontSize: 30,
-//                 color: Colors.white,
-//                 fontWeight: FontWeight.bold,
-//               ),
-//             ),
-//           ),
-//           Padding(
-//             padding: const EdgeInsets.only(top: 200.0),
-//             child: Container(
-//               decoration: const BoxDecoration(
-//                 borderRadius: BorderRadius.only(
-//                   topLeft: Radius.circular(40),
-//                   topRight: Radius.circular(40),
-//                 ),
-//                 color: Colors.white,
-//               ),
-//               padding: const EdgeInsets.symmetric(horizontal: 18),
-//               child: Column(
-//                 mainAxisAlignment: MainAxisAlignment.center,
-//                 children: [
-//                   TextField(
-//                     controller: _emailController,
-//                     decoration: InputDecoration(
-//                       suffixIcon: Icon(
-//                         Icons.check,
-//                         color: _emailController.text.isValidEmail()
-//                             ? Colors.green
-//                             : Colors.grey,
-//                       ),
-//                       label: const Text(
-//                         'Email',
-//                         style: TextStyle(
-//                           fontWeight: FontWeight.bold,
-//                           color: Color(0xffB81736),
-//                         ),
-//                       ),
-//                     ),
-//                     onChanged: (value) {
-//                       setState(() {});
-//                     },
-//                   ),
-//                   // Error message display
-//                   if (_errorMessage != null)
-//                     Padding(
-//                       padding: const EdgeInsets.only(top: 8.0),
-//                       child: Text(
-//                         _errorMessage!,
-//                         style: const TextStyle(
-//                           color: Colors.red,
-//                           fontWeight: FontWeight.bold,
-//                         ),
-//                       ),
-//                     ),
-//                   TextField(
-//                     keyboardType: TextInputType.text,
-//                     controller: _passwordController,
-//                     obscureText: !_passwordVisible,
-//                     decoration: InputDecoration(
-//                       suffixIcon: IconButton(
-//                         icon: Icon(
-//                           _passwordVisible
-//                               ? Icons.visibility
-//                               : Icons.visibility_off,
-//                           color: _passwordVisible ? Colors.green : Colors.grey,
-//                         ),
-//                         onPressed: () {
-//                           setState(() {
-//                             _passwordVisible = !_passwordVisible;
-//                           });
-//                         },
-//                       ),
-//                       label: const Text(
-//                         'Password',
-//                         style: TextStyle(
-//                           fontWeight: FontWeight.bold,
-//                           color: Color(0xffB81736),
-//                         ),
-//                       ),
-//                     ),
-//                   ),
-//                   const SizedBox(height: 20),
-//                   Row(
-//                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//                     children: [
-//                       GestureDetector(
-//                         onTap: () => _handleSignUpClick(context),
-//                         child: const Text(
-//                           'Sign up',
-//                           style: TextStyle(
-//                             fontWeight: FontWeight.bold,
-//                             fontSize: 17,
-//                             color: Color(0xff281537),
-//                           ),
-//                         ),
-//                       ),
-//                       GestureDetector(
-//                         onTap: () => _handleForgotPasswordClick(context),
-//                         child: const Text(
-//                           'Forgot Password?',
-//                           style: TextStyle(
-//                             fontWeight: FontWeight.bold,
-//                             fontSize: 17,
-//                             color: Color(0xff281537),
-//                           ),
-//                         ),
-//                       ),
-//                     ],
-//                   ),
-//                   const SizedBox(height: 70),
-//                   _buildSignInButton(context),
-//                 ],
-//               ),
-//             ),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-
-//   Widget _buildSignInButton(BuildContext context) {
-//     return SizedBox(
-//       width: double.infinity,
-//       height: 55,
-//       child: ElevatedButton(
-//         style: ElevatedButton.styleFrom(
-//           padding: EdgeInsets.zero,
-//           backgroundColor: Colors.transparent,
-//           shadowColor: Colors.transparent,
-//           shape: RoundedRectangleBorder(
-//             borderRadius: BorderRadius.circular(30),
-//           ),
-//         ),
-//         onPressed: () => _handleOnClick(context),
-//         child: Ink(
-//           decoration: BoxDecoration(
-//             borderRadius: BorderRadius.circular(30),
-//             gradient: const LinearGradient(
-//               colors: [Color(0xffB81736), Color(0xff281537)],
-//             ),
-//           ),
-//           child: Container(
-//             alignment: Alignment.center,
-//             child: const Text(
-//               'Sign In',
-//               style: TextStyle(
-//                 fontWeight: FontWeight.bold,
-//                 fontSize: 20,
-//                 color: Colors.white,
-//               ),
-//             ),
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-// }

@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:logger/logger.dart';
 
+final Logger logger = Logger();
 Future<bool> fetchSignIn(TextEditingController emailController,
     TextEditingController passwordController, BuildContext context) async {
   final baseUrl = dotenv.env['API_BASE_URL']!;
@@ -21,14 +23,13 @@ Future<bool> fetchSignIn(TextEditingController emailController,
         'password': passwordController.text,
       }),
     );
-    print('Response status: ${response.statusCode}'); // In HTTP status code
-    print('Response body: ${response.body}');
     if (response.statusCode == 200) {
       final jsonData = json.decode(response.body);
       SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setBool('isLoggedIn', true);
       await prefs.setString('accessToken', jsonData['accessToken']);
       await prefs.setString('refreshToken', jsonData['refreshToken']);
+      // ignore: use_build_context_synchronously
       Navigator.pushReplacementNamed(context, '/home');
       return true;
     } else {
@@ -69,21 +70,25 @@ Future<bool> fetchRegister(
       }),
     );
     if (response.statusCode == 200) {
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Đăng kí tài khoản thành công')),
       );
+      // ignore: use_build_context_synchronously
       Navigator.pushReplacementNamed(context, '/signin');
       return true;
     } else {
       final errorMessage =
           json.decode(response.body)['message'] ?? 'Tài khoản này đã tồn tại';
 
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(errorMessage)));
       return false;
     }
   } catch (e) {
     // Handle any exceptions
+    // ignore: use_build_context_synchronously
     ScaffoldMessenger.of(context)
         .showSnackBar(const SnackBar(content: Text('Lỗi kết nối với server')));
     return false;
@@ -107,13 +112,16 @@ Future<bool> fetchForgetPassword(TextEditingController emailController,
         'newPassword': passwordController.text,
       }),
     );
+
     if (response.statusCode == 200) {
+      if (!context.mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Đổi mật khẩu thành công')),
       );
       Navigator.pushReplacementNamed(context, '/signin');
       return true;
     } else {
+      if (!context.mounted) return false;
       final errorMessage =
           json.decode(response.body)['message'] ?? 'Tài khoản không tồn tại';
 
@@ -122,6 +130,7 @@ Future<bool> fetchForgetPassword(TextEditingController emailController,
       return false;
     }
   } catch (e) {
+    if (!context.mounted) return false;
     ScaffoldMessenger.of(context)
         .showSnackBar(const SnackBar(content: Text('Lỗi kết nối với server')));
     return false;
@@ -141,17 +150,17 @@ Future<bool> fetchSendcode(String email) async {
       body: json.encode({
         'email': convertEmail,
       }),
-    );
-
+    );  
     if (response.statusCode == 200) {
-      print("Success");
+      logger.i("Success");
+      // print('Response body: ${response.body}');
       return true;
     } else {
-      print("Failed to send verification code");
+      logger.e("Failed to send verification code");
       return false;
     }
   } catch (error) {
-    print("Error: $error");
+    logger.e("Error: $error");
     return false;
   }
 }

@@ -11,9 +11,9 @@ class CustomCard extends StatelessWidget {
     return Container(
         decoration: BoxDecoration(
           borderRadius: const BorderRadius.all(
-            Radius.circular(8.0),
+            Radius.circular(16.0),
           ),
-          color: color ?? const Color.fromARGB(255, 255, 255, 255),
+          color: color ?? const Color.fromARGB(237, 255, 255, 255),
         ),
         child: Padding(
           padding: padding ?? const EdgeInsets.all(12.0),
@@ -35,4 +35,34 @@ BoxDecoration backgound_Color() {
       end: Alignment.bottomRight,
     ),
   );
+}
+
+
+class DividerWithText extends StatelessWidget {
+  const DividerWithText({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      children: <Widget>[
+        Expanded(
+          child: Divider(
+            thickness: 1, // Độ dày của dòng
+            color: Colors.grey, // Màu của dòng
+            indent: 10.0, // Khoảng cách từ dòng đến cạnh bên trái
+            endIndent: 5.0, // Khoảng cách từ dòng đến chữ "or"
+          ),
+        ),
+        Text("or", style: TextStyle(color: Colors.grey)),
+        Expanded(
+          child: Divider(
+            thickness: 1,
+            color: Colors.grey,
+            indent: 10.0,
+            endIndent: 10.0,
+          ),
+        ),
+      ],
+    );
+  }
 }

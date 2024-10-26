@@ -1,366 +1,235 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:frontend_daktmt/apis/api_widget.dart';
 import 'package:frontend_daktmt/responsive.dart';
 import 'package:frontend_daktmt/custom_card.dart';
 
-class TempChart extends StatelessWidget {
-  TempChart({
+// ignore: must_be_immutable
+class Chart extends StatefulWidget {
+  Chart({
     super.key,
     required this.gaugeHeight,
     required this.gaugeWidth,
+    required this.token,
+    required this.label,
   });
 
   final double gaugeHeight;
   final double gaugeWidth;
-
-  final List<FlSpot> spots = const [
-    FlSpot(1.68, 21.04),
-    FlSpot(2.84, 26.23),
-    FlSpot(5.19, 19.82),
-    FlSpot(6.01, 24.49),
-    FlSpot(7.81, 19.82),
-    FlSpot(9.49, 23.50),
-    FlSpot(12.26, 19.57),
-    FlSpot(15.63, 20.90),
-    FlSpot(20.39, 39.20),
-    FlSpot(23.69, 75.62),
-    FlSpot(26.21, 46.58),
-    FlSpot(29.87, 42.97),
-    FlSpot(32.49, 46.54),
-    FlSpot(35.09, 40.72),
-    FlSpot(38.74, 43.18),
-    FlSpot(41.47, 59.91),
-    FlSpot(43.12, 53.18),
-    FlSpot(46.30, 90.10),
-    FlSpot(47.88, 81.59),
-    FlSpot(51.71, 75.53),
-    FlSpot(54.21, 78.95),
-    FlSpot(55.23, 86.94),
-    FlSpot(57.40, 78.98),
-    FlSpot(60.49, 74.38),
-    FlSpot(64.30, 48.34),
-    FlSpot(67.17, 70.74),
-    FlSpot(70.35, 75.43),
-    FlSpot(73.39, 69.88),
-    FlSpot(75.87, 80.04),
-    FlSpot(77.32, 74.38),
-    FlSpot(81.43, 68.43),
-    FlSpot(86.12, 69.45),
-    FlSpot(90.06, 78.60),
-    FlSpot(94.68, 46.05),
-    FlSpot(98.35, 42.80),
-    FlSpot(101.25, 53.05),
-    FlSpot(103.07, 46.06),
-    FlSpot(106.65, 42.31),
-    FlSpot(108.20, 32.64),
-    FlSpot(110.40, 45.14),
-    FlSpot(114.24, 53.27),
-    FlSpot(116.60, 42.13),
-    FlSpot(118.52, 57.60),
-  ];
-
-  final leftTitle = {
-    0: '0',
-    20: '20',
-    40: '40',
-    60: '60',
-    80: '80',
-    100: '100'
-  };
-
-  final bottomTitle = {
-    0: 'Jan',
-    10: 'Feb',
-    20: 'Mar',
-    30: 'Apr',
-    40: 'May',
-    50: 'Jun',
-    60: 'Jul',
-    70: 'Aug',
-    80: 'Sep',
-    90: 'Oct',
-    100: 'Nov',
-    110: 'Dec',
-  };
+  final String token;
+  String label = "Humidity";
 
   @override
-  Widget build(BuildContext context) {
-    return CustomCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Temperature (°C)",
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-          ),
-          const SizedBox(height: 20),
-          AspectRatio(
-            aspectRatio: Responsive.isMobile(context) ? 9 / 4 : 16 / 6,
-            child: LineChart(
-              LineChartData(
-                lineTouchData: const LineTouchData(
-                  handleBuiltInTouches: true,
-                ),
-                gridData: const FlGridData(show: false),
-                titlesData: FlTitlesData(
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 32,
-                      interval: 1,
-                      getTitlesWidget: (double value, TitleMeta meta) {
-                        return bottomTitle[value.toInt()] != null
-                            ? SideTitleWidget(
-                                axisSide: meta.axisSide,
-                                space: 5,
-                                child: Text(
-                                  bottomTitle[value.toInt()].toString(),
-                                  style: TextStyle(
-                                      fontSize:
-                                          Responsive.isMobile(context) ? 9 : 12,
-                                      color:
-                                          const Color.fromARGB(255, 0, 0, 0)),
-                                ),
-                              )
-                            : const SizedBox();
-                      },
-                    ),
-                  ),
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      getTitlesWidget: (double value, TitleMeta meta) {
-                        return leftTitle[value.toInt()] != null
-                            ? Text(leftTitle[value.toInt()].toString(),
-                                style: TextStyle(
-                                    fontSize:
-                                        Responsive.isMobile(context) ? 9 : 12,
-                                    color: const Color.fromARGB(255, 0, 0, 0)))
-                            : const SizedBox();
-                      },
-                      showTitles: true,
-                      interval: 1,
-                      reservedSize: 30,
-                    ),
-                  ),
-                ),
-                borderData: FlBorderData(show: false),
-                lineBarsData: [
-                  LineChartBarData(
-                      isCurved: true,
-                      curveSmoothness: 0.2,
-                      color: const Color.fromARGB(48, 255, 1, 1),
-                      barWidth: 2.5,
-                      isStrokeCapRound: true,
-                      belowBarData: BarAreaData(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Theme.of(context).primaryColor.withOpacity(0.5),
-                            const Color.fromARGB(48, 255, 1, 1)
-                          ],
-                        ),
-                        show: true,
-                      ),
-                      dotData: const FlDotData(show: false),
-                      spots: spots),
-                ],
-                minX: 0,
-                maxX: 120,
-                maxY: 105,
-                minY: -5,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // ignore: library_private_types_in_public_api
+  _ChartState createState() => _ChartState();
 }
 
-class HumiChart extends StatelessWidget {
-  HumiChart({
-    super.key,
-    required this.gaugeHeight,
-    required this.gaugeWidth,
-  });
-
-  final double gaugeHeight;
-  final double gaugeWidth;
-
-  final List<FlSpot> spots = const [
-    FlSpot(1.68, 21.04),
-    FlSpot(2.84, 26.23),
-    FlSpot(5.19, 19.82),
-    FlSpot(6.01, 24.49),
-    FlSpot(7.81, 19.82),
-    FlSpot(9.49, 23.50),
-    FlSpot(12.26, 19.57),
-    FlSpot(15.63, 20.90),
-    FlSpot(20.39, 39.20),
-    FlSpot(23.69, 75.62),
-    FlSpot(26.21, 46.58),
-    FlSpot(29.87, 42.97),
-    FlSpot(32.49, 46.54),
-    FlSpot(35.09, 40.72),
-    FlSpot(38.74, 43.18),
-    FlSpot(41.47, 59.91),
-    FlSpot(43.12, 53.18),
-    FlSpot(46.30, 90.10),
-    FlSpot(47.88, 81.59),
-    FlSpot(51.71, 75.53),
-    FlSpot(54.21, 78.95),
-    FlSpot(55.23, 86.94),
-    FlSpot(57.40, 78.98),
-    FlSpot(60.49, 74.38),
-    FlSpot(64.30, 48.34),
-    FlSpot(67.17, 70.74),
-    FlSpot(70.35, 75.43),
-    FlSpot(73.39, 69.88),
-    FlSpot(75.87, 80.04),
-    FlSpot(77.32, 74.38),
-    FlSpot(81.43, 68.43),
-    FlSpot(86.12, 69.45),
-    FlSpot(90.06, 78.60),
-    FlSpot(94.68, 46.05),
-    FlSpot(98.35, 42.80),
-    FlSpot(101.25, 53.05),
-    FlSpot(103.07, 46.06),
-    FlSpot(106.65, 42.31),
-    FlSpot(108.20, 32.64),
-    FlSpot(110.40, 45.14),
-    FlSpot(114.24, 53.27),
-    FlSpot(116.60, 42.13),
-    FlSpot(118.52, 57.60),
-  ];
-
+class _ChartState extends State<Chart> {
   final leftTitle = {
     0: '0',
     20: '20',
     40: '40',
     60: '60',
     80: '80',
-    100: '100'
+    100: '100',
   };
 
-  final bottomTitle = {
-    0: 'Jan',
-    10: 'Feb',
-    20: 'Mar',
-    30: 'Apr',
-    40: 'May',
-    50: 'Jun',
-    60: 'Jul',
-    70: 'Aug',
-    80: 'Sep',
-    90: 'Oct',
-    100: 'Nov',
-    110: 'Dec',
-  };
+  int time = 7;
+
+  Future<List<FlSpot>> fetchData(String token, String label, int time) async {
+    if (label == 'Humidity') {
+      return await fetchloghumidata(token, time); // Gọi API lấy dữ liệu độ ẩm
+    } else {
+      return await fetchlogtempdata(
+          token, time); // Gọi API lấy dữ liệu nhiệt độ
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return CustomCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Humidity (%)",
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-          ),
-          const SizedBox(height: 20),
-          AspectRatio(
-            aspectRatio: Responsive.isMobile(context) ? 9 / 4 : 16 / 6,
-            child: LineChart(
-              LineChartData(
-                lineTouchData: const LineTouchData(
-                  handleBuiltInTouches: true,
-                ),
-                gridData: const FlGridData(show: false),
-                titlesData: FlTitlesData(
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 32,
-                      interval: 1,
-                      getTitlesWidget: (double value, TitleMeta meta) {
-                        return bottomTitle[value.toInt()] != null
-                            ? SideTitleWidget(
-                                axisSide: meta.axisSide,
-                                space: 5,
-                                child: Text(
-                                  bottomTitle[value.toInt()].toString(),
-                                  style: TextStyle(
-                                      fontSize:
-                                          Responsive.isMobile(context) ? 9 : 12,
-                                      color:
-                                          const Color.fromARGB(255, 0, 0, 0)),
-                                ),
-                              )
-                            : const SizedBox();
-                      },
+    return FutureBuilder<List<FlSpot>>(
+      future: fetchData(widget.token, widget.label, time),
+
+      builder: (context, snapshot) {
+        //! loadings
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const CircularProgressIndicator();
+        } else if (snapshot.hasError) {
+          return Text('Error: ${snapshot.error}');
+        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Text('No data available');
+        }
+
+        List<FlSpot> spots = snapshot.data!;
+
+        if (spots.any((spot) => spot.y.isNaN || spot.y.isInfinite)) {
+          return const Text('Invalid data points');
+        }
+
+        double maxX = spots.map((spot) => spot.x).reduce(max);
+        double maxY = spots.map((spot) => spot.y).reduce(max) + 10;
+
+        return CustomCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.label == 'Humidity'
+                    ? 'Humidity (%)'
+                    : 'Temperature (°C)',
+                style:
+                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        time = 7;
+                      });
+                    },
+                    child: const Text('7 Days'),
+                  ),
+                  const SizedBox(width: 10),
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        time = 30;
+                      });
+                    },
+                    child: const Text('30 Days'),
+                  ),
+                  const SizedBox(width: 10),
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        time = 90;
+                      });
+                    },
+                    child: const Text('90 Days'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              AspectRatio(
+                aspectRatio: Responsive.isMobile(context) ? 9 / 4 : 16 / 6,
+                child: LineChart(
+                  LineChartData(
+                    lineTouchData: const LineTouchData(
+                      handleBuiltInTouches: true,
                     ),
-                  ),
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      getTitlesWidget: (double value, TitleMeta meta) {
-                        return leftTitle[value.toInt()] != null
-                            ? Text(leftTitle[value.toInt()].toString(),
-                                style: TextStyle(
+                    gridData: const FlGridData(show: false),
+                    titlesData: FlTitlesData(
+                      // ! đang lỗi ở đây
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 40,
+                          interval: 1,
+                          getTitlesWidget: (double value, TitleMeta meta) {
+                            if (value.toInt() < spots.length) {
+                              DateTime date = DateTime.now().subtract(Duration(
+                                  days: (spots.length - 1 - value.toInt())));
+                              String formattedDate =
+                                  '${date.month}-${date.day}';
+                              return SideTitleWidget(
+                                axisSide: meta.axisSide,
+                                space: 2,
+                                child: Text(
+                                  formattedDate,
+                                  style: TextStyle(
                                     fontSize:
                                         Responsive.isMobile(context) ? 9 : 12,
-                                    color: const Color.fromARGB(255, 0, 0, 0)))
-                            : const SizedBox();
-                      },
-                      showTitles: true,
-                      interval: 1,
-                      reservedSize: 30,
+                                    color: const Color.fromARGB(255, 0, 0, 0),
+                                  ),
+                                ),
+                              );
+                            } else {
+                              return const SizedBox();
+                            }
+                          },
+                        ),
+                      ),
+                      rightTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                      topTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                      leftTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          getTitlesWidget: (double value, TitleMeta meta) {
+                            return leftTitle[value.toInt()] != null
+                                ? Text(
+                                    leftTitle[value.toInt()].toString(),
+                                    style: TextStyle(
+                                      fontSize:
+                                          Responsive.isMobile(context) ? 9 : 12,
+                                      color: const Color.fromARGB(255, 0, 0, 0),
+                                    ),
+                                  )
+                                : const SizedBox();
+                          },
+                          showTitles: true,
+                          interval: 20,
+                          reservedSize: 40,
+                        ),
+                      ),
                     ),
+                    borderData: FlBorderData(show: false),
+                    lineBarsData: [
+                      LineChartBarData(
+                        isCurved: true,
+                        curveSmoothness: 0.2,
+                        color: widget.label == 'Humidity'
+                            ? const Color.fromARGB(87, 1, 35, 255)
+                            : const Color.fromARGB(86, 255, 1, 1),
+                        barWidth: 2.5,
+                        isStrokeCapRound: true,
+                        belowBarData: BarAreaData(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Theme.of(context).primaryColor.withOpacity(0.5),
+                              widget.label == 'Humidity'
+                                  ? const Color.fromARGB(87, 1, 35, 255)
+                                  : const Color.fromARGB(86, 255, 1, 1),
+                            ],
+                          ),
+                          show: true,
+                        ),
+                        dotData: FlDotData(
+                          show: true,
+                          getDotPainter: (spot, percent, barData, index) =>
+                              FlDotCirclePainter(
+                            radius: 3,
+                            color: widget.label == 'Humidity'
+                                ? const Color.fromARGB(255, 1, 86, 255)
+                                : const Color.fromARGB(255, 255, 1, 1),
+                            strokeWidth: 2,
+                            strokeColor: widget.label == 'Humidity'
+                                ? const Color.fromARGB(255, 1, 86, 255)
+                                : const Color.fromARGB(255, 255, 1, 1),
+                          ),
+                        ),
+                        spots: spots,
+                      ),
+                    ],
+                    minX: 0,
+                    maxX: maxX,
+                    minY: 0,
+                    maxY: maxY,
                   ),
                 ),
-                borderData: FlBorderData(show: false),
-                lineBarsData: [
-                  LineChartBarData(
-                      isCurved: true,
-                      curveSmoothness: 0.2,
-                      color: const Color.fromARGB(47, 1, 69, 255),
-                      barWidth: 2.5,
-                      isStrokeCapRound: true,
-                      belowBarData: BarAreaData(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Theme.of(context).primaryColor.withOpacity(0.5),
-                            const Color.fromARGB(47, 1, 69, 255)
-                          ],
-                        ),
-                        show: true,
-                      ),
-                      dotData: const FlDotData(show: false),
-                      spots: spots),
-                ],
-                minX: 0,
-                maxX: 120,
-                maxY: 105,
-                minY: -5,
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
