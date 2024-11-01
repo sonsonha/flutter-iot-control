@@ -97,7 +97,7 @@ class _mapState extends State<map> {
         width: widget.mapWidth,
         child: FlutterMap(
           options: MapOptions(
-            initialCenter: _deviceLocation ?? _locationA, 
+            initialCenter: _deviceLocation ?? _locationA,
             initialZoom: 15,
           ),
           children: [
@@ -114,7 +114,7 @@ class _mapState extends State<map> {
                     width: 40,
                     height: 40,
                     child: const Icon(
-                      Icons.location_on,
+                      Icons.people,
                       size: 40.0,
                       color: Colors.blue,
                     ),

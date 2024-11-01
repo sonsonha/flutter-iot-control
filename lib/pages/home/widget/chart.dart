@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:frontend_daktmt/apis/api_widget.dart';
+import 'package:frontend_daktmt/apis/api_page.dart';
 import 'package:frontend_daktmt/responsive.dart';
 import 'package:frontend_daktmt/custom_card.dart';
 
@@ -9,14 +9,10 @@ import 'package:frontend_daktmt/custom_card.dart';
 class Chart extends StatefulWidget {
   Chart({
     super.key,
-    required this.gaugeHeight,
-    required this.gaugeWidth,
     required this.token,
     required this.label,
   });
 
-  final double gaugeHeight;
-  final double gaugeWidth;
   final String token;
   String label = "Humidity";
 
@@ -39,10 +35,9 @@ class _ChartState extends State<Chart> {
 
   Future<List<FlSpot>> fetchData(String token, String label, int time) async {
     if (label == 'Humidity') {
-      return await fetchloghumidata(token, time); // Gọi API lấy dữ liệu độ ẩm
+      return await fetchloghumidata(token, time);
     } else {
-      return await fetchlogtempdata(
-          token, time); // Gọi API lấy dữ liệu nhiệt độ
+      return await fetchlogtempdata(token, time);
     }
   }
 
@@ -50,7 +45,6 @@ class _ChartState extends State<Chart> {
   Widget build(BuildContext context) {
     return FutureBuilder<List<FlSpot>>(
       future: fetchData(widget.token, widget.label, time),
-
       builder: (context, snapshot) {
         //! loadings
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -124,17 +118,22 @@ class _ChartState extends State<Chart> {
                     gridData: const FlGridData(show: false),
                     titlesData: FlTitlesData(
                       // ! đang lỗi ở đây
+
                       bottomTitles: AxisTitles(
                         sideTitles: SideTitles(
                           showTitles: true,
                           reservedSize: 40,
                           interval: 1,
                           getTitlesWidget: (double value, TitleMeta meta) {
-                            if (value.toInt() < spots.length) {
-                              DateTime date = DateTime.now().subtract(Duration(
-                                  days: (spots.length - 1 - value.toInt())));
+                            int index = value.toInt();
+                            // Đảm bảo index không vượt quá số lượng dữ liệu
+                            if (index < spots.length) {
+                              // Lấy giá trị x từ spots và chuyển đổi sang DateTime
+                              DateTime date = DateTime.now().subtract(
+                                  Duration(days: (spots.length - index)));
                               String formattedDate =
                                   '${date.month}-${date.day}';
+
                               return SideTitleWidget(
                                 axisSide: meta.axisSide,
                                 space: 2,
@@ -153,6 +152,7 @@ class _ChartState extends State<Chart> {
                           },
                         ),
                       ),
+
                       rightTitles: const AxisTitles(
                         sideTitles: SideTitles(showTitles: false),
                       ),

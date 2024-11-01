@@ -75,26 +75,27 @@ class _SignInState extends State<SignIn> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(
-                      height: 100), // Khoảng cách giữa các thành phần
-                  Image.asset(
-                    'assets/mylogoBKU.png', // Đường dẫn đến hình ảnh của bạn
-                    width: 400, // Kích thước của hình ảnh
-                    height: 400,
-                  ),
-                  const SizedBox(height: 20),
-                  const Padding(
-                    padding: EdgeInsets.only(
-                        left: 250), // Dịch dòng chữ sang trái 20 pixel
-                    child: Text(
-                      '"Khai phá ,Tiên phong, Sáng tạo"', // Dòng chữ mới
-                      style: TextStyle(
-                        fontSize: 20,
-                        color: Colors.white,
-                        fontStyle: FontStyle.italic, // In nghiêng
+                  if (!isRowLayout) const SizedBox(height: 100),
+                  if (!isRowLayout) // Khoảng cách giữa các thành phần
+                    Image.asset(
+                      'assets/mylogoBKU.png', // Đường dẫn đến hình ảnh của bạn
+                      width: 400, // Kích thước của hình ảnh
+                      height: 400,
+                    ),
+                  if (!isRowLayout) const SizedBox(height: 20),
+                  if (!isRowLayout)
+                    const Padding(
+                      padding: EdgeInsets.only(
+                          left: 250), // Dịch dòng chữ sang trái 20 pixel
+                      child: Text(
+                        '"Khai phá ,Tiên phong, Sáng tạo"', // Dòng chữ mới
+                        style: TextStyle(
+                          fontSize: 20,
+                          color: Colors.white,
+                          fontStyle: FontStyle.italic, // In nghiêng
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -103,20 +104,15 @@ class _SignInState extends State<SignIn> {
                   Alignment.centerRight, // Đặt phần tử này ở giữa màn hình
               child: Padding(
                 padding: EdgeInsets.only(
-                    right: isRowLayout ? 0.0 : 100.0,
+                    left: 10.0,
+                    right: isRowLayout ? 10.0 : 100.0,
                     top: isRowLayout ? 250.0 : 50.0,
-                    bottom: isRowLayout ? 0.0 : 50.0),
+                    bottom: isRowLayout ? 10.0 : 50.0),
                 child: Container(
                   width: isRowLayout ? double.infinity : 500.0,
                   height: double.infinity,
                   decoration: BoxDecoration(
-                    borderRadius: isRowLayout
-                        ? const BorderRadius.only(
-                            // Nếu isRowLayout = true
-                            topLeft: Radius.circular(40),
-                            topRight: Radius.circular(40),
-                          )
-                        : BorderRadius.circular(40),
+                    borderRadius: BorderRadius.circular(40),
                     color: Colors.white,
                   ),
                   padding: EdgeInsets.symmetric(
@@ -136,7 +132,6 @@ class _SignInState extends State<SignIn> {
                       TextField(
                         controller: _emailController,
                         decoration: const InputDecoration(
-                         
                           label: Text(
                             'Username or Email',
                             style: TextStyle(
@@ -218,7 +213,7 @@ class _SignInState extends State<SignIn> {
                             ),
                           ),
                         ),
-                      const SizedBox(height: 150),
+                      const SizedBox(height: 100),
                       _buildSignInButton(context),
                       const SizedBox(height: 50),
                       const DividerWithText(),
@@ -315,5 +310,3 @@ class _SignWithGG extends StatelessWidget {
     );
   }
 }
-
-

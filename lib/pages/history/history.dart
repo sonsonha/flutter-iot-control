@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:frontend_daktmt/apis/api_widget.dart'; // For environment variables
+import 'package:frontend_daktmt/apis/api_page.dart'; // For environment variables
 import 'package:frontend_daktmt/custom_card.dart';
 import 'package:frontend_daktmt/nav_bar/nav_bar_left.dart';
 import 'package:frontend_daktmt/responsive.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class HistoryScreen extends StatefulWidget {
@@ -53,11 +54,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
           _historyData = data;
         });
 
-        // ignore: use_build_context_synchronously
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(
-              'Data fetched for: ${_startDate.toString()} to ${_endDate.toString()}'),
-        ));
+        // // ignore: use_build_context_synchronously
+        // ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        //   content: Text(
+        //       'Data fetched for: ${_startDate.toString()} to ${_endDate.toString()}'),
+        // ));
       } catch (error) {
         // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -163,7 +164,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 children: [
                                   Text(
                                     _startDate != null
-                                        ? 'Start date: ${_startDate!.day}/${_startDate!.month}/${_startDate!.year}'
+                                        ? 'Start date: ${_startDate!.year}/${_startDate!.month}/${_startDate!.day}'
                                         : 'No start date selected',
                                     style: const TextStyle(fontSize: 16),
                                   ),
@@ -171,7 +172,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                       height: 8), // Space between date texts
                                   Text(
                                     _endDate != null
-                                        ? 'End date: ${_endDate!.day}/${_endDate!.month}/${_endDate!.year}'
+                                        ? 'End date: ${_endDate!.year}/${_endDate!.month}/${_endDate!.day}'
                                         : 'No end date selected',
                                     style: const TextStyle(fontSize: 16),
                                   ),
@@ -211,9 +212,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 Text(historyItem['activity'] ?? 'No activity'),
                                 Text(
                                   historyItem['Date'] != null
-                                      ? DateTime.parse(historyItem['Date'])
-                                          .toLocal()
-                                          .toString() // Parse and format the date
+                                      ? DateFormat('HH:mm:ss dd/MM/yyyy')
+                                          .format(DateTime.parse(
+                                                  historyItem['Date'])
+                                              .toLocal())
                                       : 'No date',
                                 ),
                               ],

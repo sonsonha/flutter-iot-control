@@ -10,7 +10,7 @@ import 'package:frontend_daktmt/nav_bar/nav_bar_right.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'widget/gauge.dart';
-import 'package:frontend_daktmt/apis/api_widget.dart';
+import 'package:frontend_daktmt/apis/api_page.dart';
 import 'package:frontend_daktmt/pages/noitification/noitification.dart';
 import 'package:logger/logger.dart';
 
@@ -82,12 +82,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final double gaugeWidth = isMobile ? double.infinity : 100.0;
     final bool isRowLayout = isDesktop;
 
-   
-
-
     return Scaffold(
       drawer: const Navbar_left(),
-      endDrawer: const Navbar_right(profileData: {},),
+      endDrawer: const Navbar_right(
+        profileData: {},
+      ),
       body: SingleChildScrollView(
         child: Stack(
           children: [
@@ -180,8 +179,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                             children: [
                                               Expanded(
                                                 child: Chart(
-                                                  gaugeHeight: 200.0,
-                                                  gaugeWidth: 200.0,
                                                   token: token,
                                                   label: 'Temperature',
                                                 ),
@@ -189,8 +186,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                               const SizedBox(width: 10),
                                               Expanded(
                                                 child: Chart(
-                                                  gaugeHeight: 200.0,
-                                                  gaugeWidth: 200.0,
                                                   token: token,
                                                   label: 'Humidity',
                                                 ),
@@ -251,15 +246,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
                                 const SizedBox(height: 20),
                                 Chart(
-                                  gaugeHeight: gaugeHeight,
-                                  gaugeWidth: gaugeWidth,
                                   token: token,
                                   label: 'Humidity',
                                 ),
                                 const SizedBox(height: 20),
                                 Chart(
-                                  gaugeHeight: gaugeHeight,
-                                  gaugeWidth: gaugeWidth,
                                   token: token,
                                   label: 'Temperature',
                                 ),

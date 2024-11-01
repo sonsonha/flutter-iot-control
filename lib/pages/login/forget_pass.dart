@@ -58,8 +58,8 @@ class _ForgetState extends State<Forget> {
       });
       return;
     }
-
-    if (_passwordController_1.text.length < 8) {
+    
+    if (_passwordController_1.text.isEmpty) {
       setState(() {
         _errorMessage = 'Mật khẩu phải có ít nhất 8 ký tự';
       });
@@ -126,11 +126,13 @@ class _ForgetState extends State<Forget> {
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
           Container(
             decoration: backgound_Color(),
-            padding: EdgeInsets.only(top: 20.0, left: isRowLayout ? 55 : 222),
+           padding: EdgeInsets.only(
+                top: isRowLayout ? 50.0 : 20.0, left: isRowLayout ? 55 : 222),
             alignment: Alignment.topLeft,
             child: const Text(
               'Forget password!',
@@ -142,8 +144,10 @@ class _ForgetState extends State<Forget> {
             ),
           ),
           Padding(
-            padding: EdgeInsets.fromLTRB(
-                screenWidth * 0.3, 200, screenWidth * 0.3, 100),
+           padding: isRowLayout
+                ? const EdgeInsets.fromLTRB(10, 200, 10, 10)
+                : EdgeInsets.fromLTRB(
+                    screenWidth * 0.34, 200, screenWidth * 0.34, 100),
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(22),
@@ -331,7 +335,7 @@ class _ForgetState extends State<Forget> {
   Widget _buildSignUpButton_1(BuildContext context) {
     return Row(
       mainAxisAlignment:
-          MainAxisAlignment.end, // Aligns the button to the right
+          MainAxisAlignment.center, // Aligns the button to the right
       children: [
         SizedBox(
           width: 202,

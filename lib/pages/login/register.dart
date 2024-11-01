@@ -118,11 +118,13 @@ class _RegisterState extends State<Register> {
 
     final screenWidth = MediaQuery.of(context).size.width;
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
           Container(
             decoration: backgound_Color(),
-            padding: EdgeInsets.only(top: 20.0, left: isRowLayout ? 55 : 222),
+            padding: EdgeInsets.only(
+                top: isRowLayout ? 50.0 : 20.0, left: isRowLayout ? 55 : 222),
             alignment: Alignment.topLeft,
             child: const Text(
               'Register!',
@@ -134,8 +136,10 @@ class _RegisterState extends State<Register> {
             ),
           ),
           Padding(
-            padding: EdgeInsets.fromLTRB(
-                screenWidth * 0.3, 200, screenWidth * 0.3, 100),
+            padding: isRowLayout
+                ? const EdgeInsets.fromLTRB(10, 200, 10, 10)
+                : EdgeInsets.fromLTRB(
+                    screenWidth * 0.34, 200, screenWidth * 0.34, 100),
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(22),
@@ -195,6 +199,7 @@ class _RegisterState extends State<Register> {
                         controller: _aiouser, label: 'AIO Username'),
                     _buildTextField(controller: _aiokey, label: 'AIO Key'),
                     _buildTextField(controller: _phone, label: 'Phone number'),
+                    
                     const SizedBox(height: 20),
                     _buildSignUpButton_1(context),
                   ],
@@ -403,7 +408,7 @@ class _RegisterState extends State<Register> {
           child: Container(
             alignment: Alignment.center,
             child: const Text(
-              'Confirm Sign Up',
+              'Confirm',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,

@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:frontend_daktmt/pages/home/home.dart';
 import 'package:http/http.dart'
     as http; // Import HTTP package for making requests
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // Import for storing data
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:latlong2/latlong.dart';
@@ -10,6 +11,7 @@ import 'package:latlong2/latlong.dart';
 Future<double> fetchHumidityData(String token) async {
   try {
     final baseUrl = dotenv.env['API_BASE_URL']!;
+
     final response = await http.get(
       Uri.parse('http://$baseUrl/sensor/get/humi'),
       headers: {
@@ -162,7 +164,7 @@ Future<List<FlSpot>> fetchloghumidata(String token, int time) async {
     if (response.statusCode == 200) {
       List<dynamic> data = json.decode(response.body); // Parse JSON response
 
-      logger.i('Data fetched: $data'); // In dữ liệu đã nhận
+      // logger.i('Data fetched: $data'); // In dữ liệu đã nhận
       double firstTimestamp =
           DateTime.parse(data.first['date']).millisecondsSinceEpoch.toDouble();
       // Map dữ liệu thành danh sách FlSpot
@@ -210,24 +212,18 @@ Future<List<FlSpot>> fetchlogtempdata(String token, int time) async {
     if (response.statusCode == 200) {
       List<dynamic> data = json.decode(response.body); // Parse JSON response
 
-      logger.i('Data fetched: $data'); // In dữ liệu đã nhận
-      double firstTimestamp =
-          DateTime.parse(data.first['date']).millisecondsSinceEpoch.toDouble();
+      // logger.i('Data fetched: $data');
       // Map dữ liệu thành danh sách FlSpot
       return data.map((item) {
-        // double xValue =
-        //     DateTime.parse(item['date']).millisecondsSinceEpoch.toDouble();
-        double xValue =
-            (DateTime.parse(item['date']).millisecondsSinceEpoch.toDouble() -
-                    firstTimestamp) /
-                (1000 * 60 * 60 * 24);
-        // Chuyển đổi giá trị 'value', kiểm tra cả khi value là chuỗi
-        double? yValue = item['value'] is String
+        double xValue = (DateTime.parse(item['date']).millisecondsSinceEpoch -
+                DateTime.parse(data.first['date']).millisecondsSinceEpoch) /
+            (1000 * 60 * 60 * 24); // Tính toán giá trị x dựa trên ngày
+
+        double yValue = item['value'] is String
             ? double.tryParse(item['value'])
             : item['value']?.toDouble();
 
-        // Nếu không parse được thì trả về giá trị mặc định là 0.0
-        return FlSpot(xValue, yValue ?? 0.0);
+        return FlSpot(xValue, yValue);
       }).toList();
     } else {
       final result = json.decode(response.body);
@@ -257,9 +253,20 @@ Future<List<Map<String, dynamic>>> fetchhistorydata(
 
   if (response.statusCode == 200) {
     List<dynamic> data = json.decode(response.body);
-    return data
-        .map((item) => item as Map<String, dynamic>)
-        .toList(); // Convert each item to Map
+
+    return data.map((item) {
+      if (item.containsKey('Date')) {
+        try {
+          // Assuming the format in response is "HH/mm/ss dd/MM/yyyy"
+          final date = DateFormat('HH:mm:ss dd/MM/yyyy').parse(item['Date']);
+          item['Date'] =
+              date.toIso8601String(); // Convert to ISO or preferred format
+        } catch (e) {
+          logger.e("Failed to parse date: $e");
+        }
+      }
+      return item as Map<String, dynamic>;
+    }).toList();
   } else {
     final result = json.decode(response.body);
     throw Exception('Failed to load data: ${result['error']}');
@@ -279,7 +286,76 @@ Future<Map<String, dynamic>> fetchProfileData(String token) async {
   if (response.statusCode == 200) {
     return json.decode(response.body)['data'];
   } else {
-    final result = json.decode(response.body);
-    throw Exception('Failed to load profile: ${result['error']}');
+    final decodedBody = json.decode(response.body);
+    if (decodedBody.containsKey('data')) {
+      return decodedBody['data'];
+    } else {
+      throw Exception('No data found in response');
+    }
+  }
+}
+
+Future<String> fetchChangePass(
+    String token, String password, String newPassword) async {
+  final baseUrl = dotenv.env['API_BASE_URL']!;
+  final response = await http.patch(
+    Uri.parse('http://$baseUrl/profile/change-password'),
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    },
+    body: json.encode({
+      'password': password,
+      'newpassword': newPassword,
+    }),
+  );
+
+  if (response.statusCode == 200) {
+    return 'Password changed successfully!';
+  } else {
+    return 'Failed to change password';
+  }
+}
+
+Future<Map<String, dynamic>> fetchEditProfile(
+  String token,
+  String newusername,
+  String newemail,
+  String newphone,
+  String newaoi,
+  String newaoikey,
+  String newwsv,
+  String newpassword,
+  String currentpassword,
+) async {
+  final baseUrl = dotenv.env['API_BASE_URL']!;
+  final response = await http.patch(
+    Uri.parse('http://$baseUrl/profile/edit'),
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    },
+    body: json.encode({
+      'username': newusername,
+      'email': newemail,
+      'phone_number': newphone,
+      'AIO_USERNAME': newaoi,
+      'AIO_KEY': newaoikey,
+      'webServerIp': newwsv,
+      'password': newpassword,
+      'current_password': currentpassword,
+    }),
+  );
+
+  if (response.statusCode == 200) {
+    newpassword = '';
+    return json.decode(response.body)['data'];
+  } else {
+    final decodedBody = json.decode(response.body);
+    if (decodedBody.containsKey('data')) {
+      return decodedBody['data'];
+    } else {
+      throw Exception('No data found in response');
+    }
   }
 }
