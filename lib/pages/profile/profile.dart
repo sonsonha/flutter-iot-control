@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:frontend_daktmt/custom_card.dart';
 import 'package:frontend_daktmt/nav_bar/nav_bar_left.dart';
@@ -5,6 +6,10 @@ import 'package:frontend_daktmt/responsive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend_daktmt/apis/api_page.dart';
 import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
+import 'package:logger/logger.dart';
+
+final Logger logger = Logger();
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -18,6 +23,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Map<String, dynamic>? _profileData;
   bool isEditing = false;
   final TextEditingController usernameController = TextEditingController();
+  final TextEditingController fullnameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
   final TextEditingController aioController = TextEditingController();
@@ -28,6 +34,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
       TextEditingController();
   final FocusNode passwordFocusNode = FocusNode();
   bool isPasswordEdited = false;
+  File? avatarImageFile; // Để lưu hình ảnh avatar dưới dạng File
+  File? coverPhotoFile; // Để lưu hình ảnh cover photo dưới dạng File
+
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _pickImage(bool isAvatar) async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        if (isAvatar) {
+          avatarImageFile =
+              File(pickedFile.path); // Lưu File đã chọn cho avatar
+        } else {
+          coverPhotoFile =
+              File(pickedFile.path); // Lưu File đã chọn cho cover photo
+        }
+      });
+    } else {
+      logger.i('No image selected.');
+    }
+  }
 
   @override
   void initState() {
@@ -37,20 +64,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadProfile() async {
     final prefs = await SharedPreferences.getInstance();
-    var token = prefs.getString('accessToken') ?? '';
+    var token = prefs.getString('accessToken');
 
     try {
-      Map<String, dynamic> data = await fetchProfileData(token);
+      Map<String, dynamic> data = await fetchProfileData(token!);
       setState(() {
         _profileData = data;
         usernameController.text = data['username'] ?? '';
+        fullnameController.text = data['full_name'] ?? '';
         emailController.text = data['email'] ?? '';
         phoneController.text = data['phone_number'] ?? '';
         aioController.text = data['AIO_USERNAME'] ?? '';
         aiokeyController.text = data['AIO_KEY'] ?? '';
         wsvController.text = data['webServerIp'] ?? '';
-        newpasswordController.text = '**** ****';
-        currentpasswordController.text = '';
+        newpasswordController.text = data['newpassword'] ?? '';
+        currentpasswordController.text = data['current_password'] ?? '';
       });
     } catch (error) {
       // ignore: use_build_context_synchronously
@@ -59,34 +87,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
     }
   }
-  
-  
 
   Future<void> _updateProfile() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      var token = prefs.getString('accessToken') ?? '';
+      var token = prefs.getString('accessToken');
+      logger.i('testToken', error: token);
       await fetchEditProfile(
-          token,
+          token!,
           usernameController.text,
+          fullnameController.text,
           emailController.text,
           phoneController.text,
           aioController.text,
           aiokeyController.text,
           wsvController.text,
           newpasswordController.text,
-          currentpasswordController.text);
+          currentpasswordController.text,
+          avatarImageFile,
+          coverPhotoFile);
 
       setState(() {
         _profileData?['username'] = usernameController.text;
+        _profileData?['full_name'] = fullnameController.text;
         _profileData?['email'] = emailController.text;
         _profileData?['phone_number'] = phoneController.text;
         _profileData?['AIO_USERNAME'] = aioController.text;
         _profileData?['AIO_KEY'] = aiokeyController.text;
         _profileData?['webServerIp'] = wsvController.text;
+        _profileData?['newpassword'] = newpasswordController.text;
+        _profileData?['current_password'] = currentpasswordController.text;
         isEditing = false;
       });
-
+      logger.i("test");
       // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile updated successfully!')),
@@ -168,44 +201,67 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Stack(
               alignment: Alignment.center,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(10.0),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    image: _profileData?['coverPhoto']?['data'] != null
-                        ? DecorationImage(
-                            image: MemoryImage(
-                              base64Decode(_profileData!['coverPhoto']['data']),
-                            ),
-                            fit: BoxFit.cover,
+                GestureDetector(
+                  onTap: isEditing
+                      ? () => _pickImage(false)
+                      : null, // Chọn ảnh cho cover photo
+                  child: Container(
+                    padding: const EdgeInsets.all(10.0),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      image: coverPhotoFile != null
+                          ? DecorationImage(
+                              image: FileImage(
+                                  coverPhotoFile!), // Sử dụng FileImage thay vì MemoryImage
+                              fit: BoxFit.cover,
+                            )
+                          : _profileData?['coverPhoto']?['data'] != null
+                              ? DecorationImage(
+                                  image: MemoryImage(
+                                    base64Decode(
+                                        _profileData!['coverPhoto']['data']),
+                                  ),
+                                  fit: BoxFit.cover,
+                                )
+                              : null,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    width: MediaQuery.of(context).size.width,
+                    height: MediaQuery.of(context).size.height * 0.2,
+                  ),
+                ),
+                GestureDetector(
+                  onTap: isEditing
+                      ? () => _pickImage(true)
+                      : null, // Chọn ảnh cho avatar
+                  child: CircleAvatar(
+                    radius: 50,
+                    backgroundImage: avatarImageFile != null
+                        ? FileImage(
+                            avatarImageFile!) // Sử dụng FileImage thay vì MemoryImage
+                        : null,
+                    child: avatarImageFile == null
+                        ? Text(
+                            (_profileData?['username']?[0] ?? 'N/A')
+                                .toUpperCase(),
+                            style: const TextStyle(
+                                fontSize: 40, color: Colors.white),
                           )
                         : null,
-                    borderRadius: BorderRadius.circular(10),
                   ),
-                  width: MediaQuery.of(context).size.width,
-                  height: MediaQuery.of(context).size.height * 0.2,
-                ),
-                CircleAvatar(
-                  radius: 50,
-                  backgroundImage: _profileData?['avatar']?['data'] != null
-                      ? MemoryImage(
-                          base64Decode(_profileData!['avatar']['data']),
-                        )
-                      : null,
-                  backgroundColor: Colors.blueAccent,
-                  child: (_profileData?['avatar'] == null ||
-                          _profileData?['avatar']['data'] == null)
-                      ? Text(
-                          (_profileData?['username']?[0] ?? 'N/A')
-                              .toUpperCase(),
-                          style: const TextStyle(
-                              fontSize: 40, color: Colors.white),
-                        )
-                      : null,
                 ),
               ],
             ),
-            const SizedBox(height: 16.0),
+            Text(
+              _profileData?['fullname'] ?? 'N/A',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const Divider(
+              color: Color.fromARGB(255, 141, 140, 140),
+              thickness: 0.3,
+              indent: 20,
+              endIndent: 20,
+            ),
             _buildEditableProfileItem(usernameController, 'Username'),
             _buildEditableProfileItem(emailController, 'Email'),
             _buildEditableProfileItem(newpasswordController, 'Password'),
@@ -219,66 +275,63 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildEditableProfileItem(
-    TextEditingController controller,
-    String label,
-  ) {
+  _buildEditableProfileItem(TextEditingController controller, String label) {
     bool isPasswordField = controller == newpasswordController;
+
+    if (!isEditing && isPasswordField) {
+      controller.text = '**** ****'; // Che đi mật khẩu khi không chỉnh sửa
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: isEditing || !isPasswordField
-          ? TextField(
-              controller: controller,
-              obscureText: isPasswordField &&
-                  !isEditing, // Mask text for newpassword field
-              decoration: InputDecoration(
-                labelText: label,
-                border: const OutlineInputBorder(
-                  borderSide: BorderSide(
-                    color: Color.fromARGB(255, 179, 179, 179), // Border color
-                  ),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  vertical: 10.0,
-                  horizontal: 12.0,
-                ),
-              ),
-            )
-          : TextField(
-              controller: controller,
-              readOnly: true,
-              obscureText: isPasswordField, // Mask text for newpassword field
-              decoration: InputDecoration(
-                labelText: label,
-                border: OutlineInputBorder(
-                  borderSide: const BorderSide(color: Colors.blue, width: 2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                contentPadding:
-                    const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-              ),
-              style: const TextStyle(
+      child: TextField(
+        controller: controller,
+        obscureText: isPasswordField && !isEditing, // Che đi khi là mật khẩu
+        readOnly: !isEditing || (isPasswordField && !isEditing),
+        onTap: () {
+          if (isEditing && isPasswordField) {
+            controller.clear();
+          }
+        },
+        onSubmitted: (value) {
+          if (isPasswordField) {
+            setState(() {
+              controller.text = '**** ****';
+            });
+          }
+        },
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(
+            borderSide: BorderSide(
+              color: Color.fromARGB(255, 179, 179, 179),
+            ),
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 10.0,
+            horizontal: 12.0,
+          ),
+        ),
+        style: isEditing && isPasswordField && controller.text.isEmpty
+            ? const TextStyle(color: Colors.black)
+            : const TextStyle(
                 fontWeight: FontWeight.bold,
                 color: Color.fromARGB(255, 121, 121, 121),
               ),
-            ),
+      ),
     );
   }
 
   Future<void> _showPasswordDialog(BuildContext context) async {
-    final TextEditingController passwordController = TextEditingController();
-
     return showDialog<void>(
       context: context,
-      barrierDismissible:
-          false, // Prevents dismissal by tapping outside the dialog
+      barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Enter current Password'),
+          title: const Text('Current password'),
           content: TextField(
-            controller: passwordController,
-            obscureText: true, // Hides the password input
+            controller: currentpasswordController,
+            obscureText: true, // Ẩn mật khẩu
             decoration: const InputDecoration(
               labelText: 'Password',
             ),
@@ -287,22 +340,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
             TextButton(
               child: const Text('Cancel'),
               onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
+                Navigator.of(context).pop();
               },
             ),
             TextButton(
               child: const Text('Save'),
               onPressed: () {
-                String currentPassword = passwordController.text.trim();
-                // Call _updateProfile with current password
-                if (currentPassword.isNotEmpty) {
+                if (currentpasswordController.text.trim().isNotEmpty) {
                   _updateProfile();
-                  Navigator.of(context).pop(); // Close the dialog
+                  Navigator.of(context).pop();
                 } else {
-                  // Optionally handle empty password input
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                        content: Text('Please enter your password.')),
+                        content: Text('Please enter your current password.')),
                   );
                 }
               },

@@ -30,6 +30,7 @@ class _RelayScreenState extends State<RelayScreen> {
   List<Relay> homeRelays = [];
   final TextEditingController _idController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
+  // bool isTurnOn = false;
 
   bool _idError = false;
   String _errorMessage = '';
@@ -253,7 +254,7 @@ class _RelayScreenState extends State<RelayScreen> {
 
       if (response.statusCode == 200) {
         logger.i("Relay $relayId is ${state ? 'ON' : 'OFF'}");
-
+        // isTurnOn = state;
         // Fetch updated relays from the server after changing the relay status
         await fetchRelaysAPI();
       } else {
@@ -565,6 +566,81 @@ class _RelayScreenState extends State<RelayScreen> {
     });
   }
 
+  void _confirmDeleteRelays() async {
+    // Fetch relays already on the home screen
+    bool flagRemoveFromHome = false;
+    int maxRelaysAllowAddToScreen =
+        4; // Maximum relays allowed add to Home screen
+    int amountRemoveFromHome = 0;
+    List<String> existingHomeRelayIds = await fetchHomeRelays();
+    List<Relay> selectedRelays = [];
+    List<String> alreadyAddedRelays = [];
+
+    // Collect selected relays and check if they're already added
+    for (int i = 0; i < relays.length; i++) {
+      if (existingHomeRelayIds.contains(relays[i].id)) {
+        alreadyAddedRelays.add(relays[i].name);
+      }
+      if (_isSelected[i]) {
+        selectedRelays.add(relays[i]);
+      }
+    }
+
+    for (int i = 0; i < relays.length; i++) {
+      if (!_isSelected[i] && alreadyAddedRelays.contains(relays[i].name)) {
+        flagRemoveFromHome = true;
+        bool removeHome = await setRelayToHomeAPI(relays[i].id, false);
+        if (removeHome) {
+          amountRemoveFromHome++;
+          homeRelays.remove(
+              relays[i]); // Remove from homeRelays if API call is successful
+        }
+      }
+    }
+
+    if (flagRemoveFromHome) {
+      flagRemoveFromHome = false;
+      // ignore: use_build_context_synchronously
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content:
+                Text('$amountRemoveFromHome relays removed to home screen!')),
+      );
+      amountRemoveFromHome = 0;
+    }
+
+    // Check if adding selected relays exceeds the limit of 4
+    if (selectedRelays.length > maxRelaysAllowAddToScreen ||
+        existingHomeRelayIds.length == maxRelaysAllowAddToScreen) {
+      // ignore: use_build_context_synchronously
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Max relay add to home is 4')),
+      );
+    } else {
+      // Add each selected relay by calling the API
+      int numOfRelaysAdded = 0;
+      for (var relay in selectedRelays) {
+        if (!alreadyAddedRelays.contains(relay.name)) {
+          bool isAdded = await setRelayToHomeAPI(relay.id, true);
+          if (isAdded) {
+            homeRelays
+                .add(relay); // Add to homeRelays if API call is successful
+            numOfRelaysAdded++;
+          }
+        }
+      }
+      // ignore: use_build_context_synchronously
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text("$numOfRelaysAdded relay added to home screen!")),
+      );
+    }
+
+    setState(() {
+      _selectMode = false; // Disable selection mode
+    });
+  }
+
   void _editRelay(int index) {
     // Reset controllers before showing the dialog
     _idController.clear();
@@ -710,7 +786,7 @@ class _RelayScreenState extends State<RelayScreen> {
     return AppBar(
       title: const Text('Relay', style: TextStyle(fontSize: 24)),
       actions: [
-        if (_showDeleteIcon || _showEditIcon)
+        if (_showDeleteIcon || _showEditIcon || _isAddToHomeMode)
           IconButton(
             icon: const Icon(Icons.cancel),
             onPressed: _resetToNormalMode,
@@ -822,30 +898,29 @@ class _RelayScreenState extends State<RelayScreen> {
 
   SpeedDial _buildSpeedDial() {
     return SpeedDial(
-      icon: Icons.menu_open_rounded,
+      icon: _showDeleteIcon || _showEditIcon || _isAddToHomeMode
+          ? Icons.cancel_presentation_rounded
+          : Icons.menu_open_rounded, // Change the icon based on the condition
       backgroundColor: Colors.blueAccent,
-      // Optionally, remove the label from the SpeedDial itself if you want the hover behavior
       children: [
         SpeedDialChild(
           child: const Tooltip(
-            message: 'Add Relay', // This will show when hovered
-            child: Icon(Icons.add, color: Colors.blue), // Blue color for icon
+            message: 'Add Relay',
+            child: Icon(Icons.add, color: Colors.blue),
           ),
-          label: '', // Hide the label here
           onTap: _addRelay,
         ),
         SpeedDialChild(
           child: const Tooltip(
-            message: 'Delete Relay', // Show label on hover
+            message: 'Delete Relay',
             child: Icon(Icons.delete_outline, color: Colors.blue),
           ),
-          label: '', // Hide label by default
           onTap: () {
             setState(() {
               _showDeleteIcon = true;
               _showEditIcon = false;
               _isAddToHomeMode = false;
-              _toggleSelectMode();
+              _selectMode = false;
             });
           },
         ),
@@ -854,25 +929,19 @@ class _RelayScreenState extends State<RelayScreen> {
             message: 'Add to Home',
             child: Icon(Icons.home_work_sharp, color: Colors.blue),
           ),
-          label: '',
           onTap: () {
             setState(() {
               _showDeleteIcon = false;
               _showEditIcon = false;
-              // _isAddToHomeMode = true;
               _toggleAddToHomeMode();
-              // _isSelected =
-              //     List.filled(relays.length, false); // Reset all checkboxes
             });
           },
         ),
         SpeedDialChild(
           child: const Tooltip(
-            message: 'Rename', // Show label on hover
-            // child: Colors.white,
+            message: 'Rename',
             child: Icon(Icons.edit_note_sharp, color: Colors.blue),
           ),
-          label: '', // Hide label by default
           onTap: () {
             setState(() {
               _isAddToHomeMode = false;
@@ -882,32 +951,104 @@ class _RelayScreenState extends State<RelayScreen> {
             });
           },
         ),
-        SpeedDialChild(
-          child: const Tooltip(
-            message: 'Home', // Show label on hover
-            child: Icon(Icons.home, color: Colors.blue),
-          ),
-          label: '', // Hide label by default
-          onTap: () {
-            setState(() {
-              _resetToNormalMode();
-            });
-          },
-        ),
       ],
+      onOpen: () {
+        if (_isAddToHomeMode || _showDeleteIcon || _showEditIcon) {
+          _resetToNormalMode();
+        }
+      },
     );
   }
 
-  // Checkbox _buildCheckbox(int index) {
-  //   return Checkbox(
-  //     value: _isSelected[index],
-  //     onChanged: (bool? value) {
-  //       setState(() {
-  //         _isSelected[index] = value ?? false;
-  //       });
-  //     },
+  // SpeedDial _buildSpeedDial() {
+  //   return SpeedDial(
+  //     icon: Icons.menu_open_rounded,
+  //     backgroundColor: Colors.blueAccent,
+  //     // Optionally, remove the label from the SpeedDial itself if you want the hover behavior
+  //     children: [
+  //       SpeedDialChild(
+  //         child: const Tooltip(
+  //           message: 'Add Relay', // This will show when hovered
+  //           child: Icon(Icons.add, color: Colors.blue), // Blue color for icon
+  //         ),
+  //         // label: '', // Hide the label here
+  //         onTap: _addRelay,
+  //       ),
+  //       SpeedDialChild(
+  //         child: const Tooltip(
+  //           message: 'Delete Relay', // Show label on hover
+  //           child: Icon(Icons.delete_outline, color: Colors.blue),
+  //         ),
+  //         // label: '', // Hide label by default
+  //         onTap: () {
+  //           setState(() {
+  //             _showDeleteIcon = true;
+  //             _showEditIcon = false;
+  //             _isAddToHomeMode = false;
+  //             _selectMode = false;
+  //             // _toggleSelectMode();
+  //           });
+  //         },
+  //       ),
+  //       SpeedDialChild(
+  //         child: const Tooltip(
+  //           message: 'Add to Home',
+  //           child: Icon(Icons.home_work_sharp, color: Colors.blue),
+  //         ),
+  //         // label: '',
+  //         onTap: () {
+  //           setState(() {
+  //             _showDeleteIcon = false;
+  //             _showEditIcon = false;
+  //             // _isAddToHomeMode = true;
+  //             _toggleAddToHomeMode();
+  //             // _isSelected =
+  //             //     List.filled(relays.length, false); // Reset all checkboxes
+  //           });
+  //         },
+  //       ),
+  //       SpeedDialChild(
+  //         child: const Tooltip(
+  //           message: 'Rename', // Show label on hover
+  //           // child: Colors.white,
+  //           child: Icon(Icons.edit_note_sharp, color: Colors.blue),
+  //         ),
+  //         // label: '', // Hide label by default
+  //         onTap: () {
+  //           setState(() {
+  //             _isAddToHomeMode = false;
+  //             _showEditIcon = true;
+  //             _showDeleteIcon = false;
+  //             _selectMode = false;
+  //           });
+  //         },
+  //       ),
+  //       // SpeedDialChild(
+  //       //   child: const Tooltip(
+  //       //     message: 'Home', // Show label on hover
+  //       //     child: Icon(Icons.home, color: Colors.blue),
+  //       //   ),
+  //       //   label: '', // Hide label by default
+  //       //   onTap: () {
+  //       //     setState(() {
+  //       //       _resetToNormalMode();
+  //       //     });
+  //       //   },
+  //       // ),
+  //     ],
   //   );
   // }
+
+  // // Checkbox _buildCheckbox(int index) {
+  // //   return Checkbox(
+  // //     value: _isSelected[index],
+  // //     onChanged: (bool? value) {
+  // //       setState(() {
+  // //         _isSelected[index] = value ?? false;
+  // //       });
+  // //     },
+  // //   );
+  // // }
 
   Column _buildRelaySubtitle(int index) {
     return Column(

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:frontend_daktmt/pages/home/home.dart';
 import 'package:http/http.dart'
@@ -295,30 +296,9 @@ Future<Map<String, dynamic>> fetchProfileData(String token) async {
   }
 }
 
-Future<String> fetchChangePass(
-    String token, String password, String newPassword) async {
-  final baseUrl = dotenv.env['API_BASE_URL']!;
-  final response = await http.patch(
-    Uri.parse('http://$baseUrl/profile/change-password'),
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer $token',
-    },
-    body: json.encode({
-      'password': password,
-      'newpassword': newPassword,
-    }),
-  );
-
-  if (response.statusCode == 200) {
-    return 'Password changed successfully!';
-  } else {
-    return 'Failed to change password';
-  }
-}
-
 Future<Map<String, dynamic>> fetchEditProfile(
   String token,
+  String newfullname,
   String newusername,
   String newemail,
   String newphone,
@@ -327,35 +307,61 @@ Future<Map<String, dynamic>> fetchEditProfile(
   String newwsv,
   String newpassword,
   String currentpassword,
+  File? avatarImageFile,
+  File? coverPhotoFile,
 ) async {
-  final baseUrl = dotenv.env['API_BASE_URL']!;
-  final response = await http.patch(
-    Uri.parse('http://$baseUrl/profile/edit'),
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer $token',
-    },
-    body: json.encode({
-      'username': newusername,
-      'email': newemail,
-      'phone_number': newphone,
-      'AIO_USERNAME': newaoi,
-      'AIO_KEY': newaoikey,
-      'webServerIp': newwsv,
-      'password': newpassword,
-      'current_password': currentpassword,
-    }),
-  );
+  final baseUrl = dotenv.env['API_BASE_URL'];
+  if (baseUrl == null) {
+    throw Exception('API_BASE_URL không được thiết lập');
+  }
+  final uri = Uri.parse('http://$baseUrl/profile/edit');
 
-  if (response.statusCode == 200) {
-    newpassword = '';
-    return json.decode(response.body)['data'];
-  } else {
-    final decodedBody = json.decode(response.body);
-    if (decodedBody.containsKey('data')) {
-      return decodedBody['data'];
-    } else {
-      throw Exception('No data found in response');
+  try {
+    // Sử dụng MultipartRequest để upload file
+    final request = http.MultipartRequest('PATCH', uri)
+      ..headers['Authorization'] = 'Bearer $token';
+
+    // Thêm các trường dữ liệu dạng text vào request
+    request.fields['username'] = newusername;
+    request.fields['fullname'] = newfullname;
+    request.fields['email'] = newemail;
+    request.fields['phone_number'] = newphone;
+    request.fields['AIO_USERNAME'] = newaoi;
+    request.fields['AIO_KEY'] = newaoikey;
+    request.fields['webServerIp'] = newwsv;
+    request.fields['newpassword'] = newpassword;
+    request.fields['currentpassword'] = currentpassword;
+
+    // Thêm tệp avatar nếu có
+    if (avatarImageFile != null) {
+      request.files.add(
+        await http.MultipartFile.fromPath('avatar', avatarImageFile.path),
+      );
     }
+
+    // Thêm tệp cover photo nếu có
+    if (coverPhotoFile != null) {
+      request.files.add(
+        await http.MultipartFile.fromPath('coverPhoto', coverPhotoFile.path),
+      );
+    }
+
+    // Gửi request và xử lý response
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body)['data'];
+      return data;
+    } else {
+      final decodedBody = json.decode(response.body);
+      if (decodedBody.containsKey('data')) {
+        return decodedBody['data'];
+      } else {
+        throw Exception('No data found in response');
+      }
+    }
+  } catch (e) {
+    throw Exception('Lỗi khi gửi request: $e');
   }
 }

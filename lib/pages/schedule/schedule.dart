@@ -11,8 +11,13 @@ class Relay {
   String id;
   String name;
   bool isOn;
+  bool isSetChedule;
 
-  Relay({required this.id, required this.name, this.isOn = false});
+  Relay(
+      {required this.id,
+      required this.name,
+      this.isOn = false,
+      this.isSetChedule = false});
 }
 
 class Action {
@@ -56,15 +61,6 @@ class Schedule {
       actions: (json['actions'] as List<dynamic>)
           .map((actionJson) => Action.fromJson(actionJson))
           .toList(),
-    );
-  }
-
-  // Helper function to parse time strings into TimeOfDay
-  static TimeOfDay _parseTime(String timeString) {
-    final timeParts = timeString.split(':');
-    return TimeOfDay(
-      hour: int.parse(timeParts[0]),
-      minute: int.parse(timeParts[1]),
     );
   }
 }
@@ -165,51 +161,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     }
   }
 
-  TimeOfDay _parseTime(String? time) {
-    if (time == null) return TimeOfDay.now();
-
-    time = time.replaceAll(RegExp(r'\s+'), ' ').trim(); // Normalize whitespace
-    // print("Parsing time: '$time'"); // Debugging line
-
-    try {
-      final parts = time.split(' '); // Split on whitespace for AM/PM
-      List<String> timeParts;
-      String period = '';
-
-      // Check if there's an AM/PM part
-      if (parts.length == 2) {
-        timeParts = parts[0].split(':');
-        period = parts[1].toUpperCase();
-      } else {
-        timeParts = parts[0].split(':');
-      }
-
-      if (timeParts.length != 2) {
-        throw const FormatException("Invalid time format");
-      }
-
-      int hour = int.parse(timeParts[0]);
-      int minute = int.parse(timeParts[1]);
-
-      // Handle AM/PM
-      if (period == 'PM' && hour < 12) {
-        hour += 12; // Convert PM hour to 24-hour format
-      } else if (period == 'AM' && hour == 12) {
-        hour = 0; // Midnight case
-      }
-
-      // Ensure hour is within valid range
-      if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
-        throw const FormatException("Invalid time range");
-      }
-
-      return TimeOfDay(hour: hour % 24, minute: minute);
-    } catch (e) {
-      print("Failed to parse time: '$time' - Error: $e");
-      return TimeOfDay.now(); // Default to current time on error
-    }
-  }
-
   Future<void> _addScheduleAPI(String scheduleName, List<String> day,
       List<Map<String, dynamic>> actions) async {
     final prefs = await SharedPreferences.getInstance();
@@ -218,10 +169,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     final url = Uri.parse('http://$baseUrl/schedule/add');
     // Collect selected days and relay actions
 
+    String timeString = formatTimeOfDay(selectedTime);
+
     Map<String, dynamic> requestBody = {
       "schedule_name": _nameController.text,
       "day": day,
-      "time": selectedTime.format(context),
+      "time": timeString,
       "actions": actions,
     };
 
@@ -246,36 +199,19 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     }
   }
 
-  // TimeOfDay parseTimeString(String time) {
-  //   final parts = time.split(':');
-  //   final hour = int.parse(parts[0]);
-  //   final minute = int.parse(parts[1]);
-  //   return TimeOfDay(hour: hour, minute: minute);
-  // }
-
   TimeOfDay parseTimeString(String time) {
     try {
-      // Check if the time string contains 'AM' or 'PM'
-      bool isPm = time.contains('PM');
-      bool isAmPmFormat = isPm || time.contains('AM');
-
-      // Remove AM/PM from the string if present
-      if (isAmPmFormat) {
-        time = time.replaceAll(RegExp(r'AM|PM'), '').trim();
-      }
-
       // Split the time string by ':'
       final parts = time.split(':');
-      int hour = int.parse(parts[0]);
+      if (parts.length != 2) throw const FormatException();
+
+      // Parse hours and minutes as integers
+      final hour = int.parse(parts[0]);
       final minute = int.parse(parts[1]);
 
-      // Convert hour to 24-hour format if it's in AM/PM format
-      if (isAmPmFormat) {
-        if (isPm && hour != 12) {
-          hour += 12; // Convert PM to 24-hour format
-        } else if (!isPm && hour == 12) {
-          hour = 0; // Convert 12 AM to 0 hours
-        }
+      // Validate hour and minute ranges
+      if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+        throw const FormatException("Invalid hour or minute range.");
       }
 
       return TimeOfDay(hour: hour, minute: minute);
@@ -300,20 +236,21 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
     await fetchRelaysAPI();
 
-    // Set selected relays
     for (int i = 0; i < relays.length; i++) {
-      // Check if each relay in the list matches an action in the schedule
-      print("Loop iteration: $i");
+      // Find the action for the current relay, allowing a null result if no match
+      Action? relayAction = schedules[index].actions.firstWhere(
+            (action) => action.relayId == int.tryParse(relays[i].id),
+            orElse: () => Action(
+                relayId: int.parse(relays[i].id),
+                action: "OFF"), // Provide a default Action if not found
+          );
+
+      // Set isSetChedule based on the action's state
+      relays[i].isSetChedule = (relayAction.action == "ON");
       _isSelectedRelays[i] = schedules[index]
           .actions
           .any((action) => action.relayId == int.tryParse(relays[i].id));
-      print("Test");
     }
-    print(_isSelectedRelays);
-    // Fetch the relays and show the dialog
-
-    // await fetchRelaysAPI();
-    print(_isSelectedRelays);
     showDialog(
       context: context,
       builder: (context) {
@@ -404,10 +341,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("Select new relays:"),
+        const Text("Select desired relay states:"),
         ...relays.asMap().entries.map((entry) {
           int index = entry.key;
           var relay = entry.value;
+
           return ListTile(
             leading: Checkbox(
               value: _isSelectedRelays[index],
@@ -418,13 +356,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               },
             ),
             title: Text(relay.name),
-            subtitle: Text("Current state: ${relay.isOn ? "ON" : "OFF"}"),
+            subtitle:
+                Text("Desired state: ${relay.isSetChedule ? "ON" : "OFF"}"),
             trailing: Switch(
-              value: relays[index].isOn,
+              value: relay.isSetChedule,
               activeColor: Colors.green,
-              onChanged: (bool value) async {
+              onChanged: (bool value) {
                 setState(() {
-                  relays[index].isOn = value;
+                  relay.isSetChedule = value;
                 });
               },
             ),
@@ -435,11 +374,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   List<Widget> _buildNewDialogActions(StateSetter setState) {
+    bool isNewName =
+        (_nameController.text == schedules[indexScheduleEdit].name);
     return [
       ElevatedButton(
         onPressed: () async {
           if (schedules
-              .any((schedule) => schedule.name == _nameController.text)) {
+                  .any((schedule) => schedule.name == _nameController.text) &&
+              !isNewName) {
             setState(() {
               _nameError = true;
               _errorMessage = 'Schedule name already exists!';
@@ -450,7 +392,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             });
 
             for (int i = 0; i < relays.length; i++) {
-              if (_isSelectedRelays[i]) {
+              if (_isSelectedRelays[i] &&
+                  !selectedRelays.any((relay) => relay.id == relays[i].id)) {
+                // Check whether the selected relays is added to selectedRelays list or not to add
                 selectedRelays.add(relays[i]);
               }
             }
@@ -459,7 +403,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             List<Map<String, dynamic>> action = selectedRelays.map((relay) {
               return {
                 "relayId": relay.id,
-                "action": relay.isOn ? "OFF" : "ON",
+                "action": relay.isSetChedule ? "OFF" : "ON",
               };
             }).toList();
             List<String> selectedDaysList = _selectedDays.entries
@@ -480,7 +424,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.blueAccent,
         ),
-        child: const Text('Add'),
+        child: const Text('Update'),
       ),
       ElevatedButton(
         onPressed: () {
@@ -548,6 +492,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   void _addSchedule() async {
+    for (var day in _days) {
+      _selectedDays[day] = false;
+    }
     _nameController.clear();
     _nameError = false; // Reset error state
     _errorMessage = ''; // Reset error message
@@ -657,13 +604,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               },
             ),
             title: Text(relay.name),
-            subtitle: Text("Current state: ${relay.isOn ? "ON" : "OFF"}"),
+            subtitle:
+                Text("Current state: ${relay.isSetChedule ? "ON" : "OFF"}"),
             trailing: Switch(
-              value: relays[index].isOn,
+              value: relays[index].isSetChedule,
               activeColor: Colors.green,
               onChanged: (bool value) async {
                 setState(() {
-                  relays[index].isOn = value;
+                  relays[index].isSetChedule = value;
                 });
               },
             ),
@@ -703,7 +651,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             List<Map<String, dynamic>> action = selectedRelays.map((relay) {
               return {
                 "relayId": relay.id,
-                "action": relay.isOn ? "OFF" : "ON",
+                "action": relay.isSetChedule ? "OFF" : "ON",
               };
             }).toList();
             List<String> selectedDaysList = _selectedDays.entries
@@ -792,42 +740,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       print("Error occurred: $e");
     }
   }
-
-  // // Function to precheck relays bè
-  // void fetchInitialAction(int index) async {
-  //   List<String> containRelayIds = schedules[index]
-  //       .actions
-  //       .map((action) => action['relayId'] as String)
-  //       .toList();
-
-  //   List<Relay> relaysAddedToSchedule =
-  //       relays.where((relay) => containRelayIds.contains(relay.id)).toList();
-  //   // print(selectedActions[0]["relayId"]);
-
-  //   setState(() {
-  //     _isSelectedRelays = List.generate(
-  //       relays.length,
-  //       (idx) => relaysAddedToSchedule.contains(relays[idx]),
-  //     );
-  //   });
-  // }
-
-  // void fetchInitialAction(int index) async {
-  //   // Retrieve all relay IDs from the actions in the specified schedule.
-  //   List<String> containRelayIds = schedules[index]
-  //       .actions
-  //       .map((action) => action['relayId'] as String)
-  //       .toList();
-
-  //   // Update the list of selected relays based on relay IDs.
-  //   setState(() {
-  //     _isSelectedRelays = List.generate(
-  //       relays.length,
-  //       (idx) => containRelayIds.contains(relays[idx].id),
-  //     );
-  //   });
-  //   print(schedules[index].name);
-  // }
 
   Future<void> editScheduleAPI(
       String scheduleId,
@@ -935,43 +847,50 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   Widget _buildSpeedDial() {
     return SpeedDial(
-      icon: Icons.menu,
+      icon: _showDeleteIcon || _showEditIcon
+          ? Icons.cancel_presentation_rounded
+          : Icons.menu_open_rounded, // Change the icon based on the condition
       backgroundColor: Colors.blueAccent,
       children: [
         SpeedDialChild(
-          child: const Icon(Icons.add),
-          label: 'Add Schedule',
+          child: const Tooltip(
+            message: 'Add schedule',
+            child: Icon(Icons.add, color: Colors.blue),
+          ),
           onTap: _addSchedule,
         ),
         SpeedDialChild(
-          child: const Icon(Icons.delete),
-          label: 'Delete',
+          child: const Tooltip(
+            message: 'Delete schedule',
+            child: Icon(Icons.delete, color: Colors.blue),
+          ),
           onTap: () {
             setState(() {
               _showDeleteIcon = true;
               _showEditIcon = false;
-              _toggleSelectMode();
-            });
-          },
-        ),
-        SpeedDialChild(
-          child: const Icon(Icons.edit),
-          label: 'Edit',
-          onTap: () {
-            setState(() {
-              _toggleShowEditIcon();
-              _showDeleteIcon = false;
-
               _selectMode = false;
             });
           },
         ),
         SpeedDialChild(
-          child: const Icon(Icons.home),
-          label: 'Home',
-          onTap: _resetToNormalMode,
+          child: const Tooltip(
+            message: 'Edit schedule',
+            child: Icon(Icons.edit, color: Colors.blue),
+          ),
+          onTap: () {
+            setState(() {
+              _toggleShowEditIcon();
+              _showDeleteIcon = false;
+              _selectMode = false;
+            });
+          },
         ),
       ],
+      onOpen: () {
+        if (_showDeleteIcon || _showEditIcon) {
+          _resetToNormalMode();
+        }
+      },
     );
   }
 
@@ -1073,7 +992,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (_showDeleteIcon && _isSelected[index])
+        if (_showDeleteIcon)
           IconButton(
             icon: const Icon(Icons.delete, color: Colors.red),
             onPressed: () => _deleteSchedule(index),

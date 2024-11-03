@@ -1,47 +1,130 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:frontend_daktmt/apis/api_page.dart';
 import 'package:frontend_daktmt/apis/apis_login.dart';
 import 'package:frontend_daktmt/responsive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 
-// ignore: camel_case_types
+class Schedule {
+  String id;
+  String name;
+  bool isOn;
+  String day;
+  String time;
+
+  Schedule({
+    required this.id,
+    required this.name,
+    required this.isOn,
+    required this.day,
+    required this.time,
+  });
+
+  factory Schedule.fromJson(Map<String, dynamic> json) {
+    return Schedule(
+      id: json['schedule_id']?.toString() ?? '',
+      name: json['schedule_name'] ?? '',
+      isOn: json['state'] as bool,
+      day: (json['day'] as List<dynamic>).join(', '),
+      time: json['time'],
+    );
+  }
+}
+
+final currentDay = DateTime.now().weekday;
+final daysOfWeek = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday'
+];
+final today = daysOfWeek[currentDay - 1];
+// List<Schedule> schedules = [];
+List<Schedule> todaySchedules = [];
+
 class nabarright_set extends StatefulWidget {
   const nabarright_set({super.key});
 
   @override
-  // ignore: library_private_types_in_public_api
   _nabarright_setState createState() => _nabarright_setState();
 }
 
-// ignore: camel_case_types
 class _nabarright_setState extends State<nabarright_set> {
-  Map<String, dynamic>? profileData; // Lưu dữ liệu profile
+  Map<String, dynamic>? profileData;
 
   @override
   void initState() {
     super.initState();
     _getToken();
-    _loadProfile(); // Gọi hàm để lấy dữ liệu profile từ API
+    _loadProfile();
+    // filterTodaySchedules();
+    fetchSchedulesAPI(today);
   }
 
   String? token;
 
-// Lấy token từ SharedPreferences hoặc từ một nguồn khác
   void _getToken() async {
     final prefs = await SharedPreferences.getInstance();
-    token = prefs.getString('accessToken'); // Đảm bảo 'your_token_key' đúng
+    token = prefs.getString('accessToken');
   }
 
   Future<void> _loadProfile() async {
     try {
       final data = await fetchProfileData(token!);
-
       setState(() {
         profileData = data;
       });
     } catch (error) {
       logger.e("Error fetching profile: $error");
+    }
+  }
+
+  Future<void> fetchSchedulesAPI(String day) async {
+    final prefs = await SharedPreferences.getInstance();
+    var token = prefs.getString('accessToken')!;
+    final baseUrl = dotenv.env['API_BASE_URL']!;
+    final url = Uri.parse('http://$baseUrl/schedule/get-home');
+
+    Map<String, dynamic> requestBody = {
+      "day": day,
+    };
+
+    try {
+      var response = await http.patch(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token'
+        },
+        body: jsonEncode(requestBody),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+
+        if (responseData is List) {
+          List<Schedule> fetchedSchedules = responseData
+              .map<Schedule>((scheduleJson) => Schedule.fromJson(scheduleJson))
+              .toList();
+
+          setState(() {
+            todaySchedules = fetchedSchedules;
+            // filterTodaySchedules(); // Filter today's schedules after updating the list
+          });
+          print("Success to fetch schedules");
+        } else {
+          print("Unexpected response format: ${response.body}");
+        }
+      } else {
+        print("Failed to fetch schedules: ${response.body}");
+      }
+    } catch (e) {
+      print("Error occurred: $e");
     }
   }
 
@@ -87,7 +170,7 @@ class _nabarright_setState extends State<nabarright_set> {
                           width: 35,
                           height: 35,
                           fit: BoxFit.cover,
-                        ), // Dự phòng hình ảnh
+                        ),
                 ),
                 SizedBox(width: isRowLayout ? 8 : 0),
                 isRowLayout
@@ -109,13 +192,10 @@ class _nabarright_setState extends State<nabarright_set> {
   }
 }
 
-// ignore: camel_case_types
 class Navbar_right extends StatelessWidget {
-  final Map<String, dynamic> profileData; // Thêm trường này
+  final Map<String, dynamic> profileData;
 
-  const Navbar_right(
-      {super.key,
-      required this.profileData}); // Nhận profileData từ constructor
+  const Navbar_right({super.key, required this.profileData});
 
   @override
   Widget build(BuildContext context) {
@@ -131,11 +211,10 @@ class Navbar_right extends StatelessWidget {
                 child: profileData['avatar'] != null &&
                         profileData['avatar']['data'] != null
                     ? Image.memory(
-                        base64Decode(profileData['avatar']
-                            ['data']), // Hiển thị ảnh từ base64
+                        base64Decode(profileData['avatar']['data']),
                         fit: BoxFit.cover,
                       )
-                    : Image.asset('assets/hcmut.png'), // Dự phòng hình ảnh
+                    : Image.asset('assets/hcmut.png'),
               ),
             ),
             decoration: const BoxDecoration(
@@ -144,57 +223,79 @@ class Navbar_right extends StatelessWidget {
           ),
           const Divider(),
           const ListTile(
-            title: Text('Tests scheduled'),
+            title: Text('Schedule today'),
           ),
-          _buildScheduleCard("Mathematics", "On", "Mon"),
-          _buildScheduleCard("Physics", "Off", "Wed"),
-          _buildScheduleCard("Chemistry", "On", "Fri"),
-          _buildScheduleCard("English", "Off", "Sun"),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final cardWidth = constraints.maxWidth *
+                  0.9; // Adjusts card size to 90% of the drawer width
+
+              return ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: todaySchedules.length,
+                itemBuilder: (context, index) {
+                  return _buildScheduleCard(index, cardWidth);
+                },
+              );
+            },
+          ),
         ],
       ),
     );
   }
 }
 
-Widget _buildScheduleCard(String subject, String status, String day) {
-  // ignore: non_constant_identifier_names
-  String Subject =
-      subject.length > 10 ? "${subject.substring(0, 10)}..." : subject;
-
-  return Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-    child: Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 4,
-            offset: Offset(2, 2),
-          ),
-        ],
+Column _buildScheduleSubtitle(int index) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        todaySchedules[index].isOn ? 'ON' : 'OFF',
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: todaySchedules[index].isOn ? Colors.green : Colors.red,
+        ),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            Subject,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          Text(
-            day,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          Text(
-            status,
-            style: TextStyle(
-              color: status == "On" ? Colors.green : Colors.red,
-              fontWeight: FontWeight.w600,
+    ],
+  );
+}
+
+Card _buildScheduleCard(int index, double width) {
+  return Card(
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(15.0),
+    ),
+    elevation: 5,
+    margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
+    child: SizedBox(
+      width: width, // Set card width
+      child: ListTile(
+        leading: const Icon(
+          Icons.electrical_services_rounded,
+          color: Colors.blueAccent,
+          size: 30,
+        ),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              todaySchedules[index].name,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(width: 10),
+            Row(
+              children: [
+                _buildScheduleSubtitle(index),
+                Text(todaySchedules[index].time),
+              ],
+            ),
+          ],
+        ),
       ),
     ),
   );
