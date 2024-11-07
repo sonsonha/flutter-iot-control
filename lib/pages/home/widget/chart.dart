@@ -17,7 +17,6 @@ class Chart extends StatefulWidget {
   String label = "Humidity";
 
   @override
-  // ignore: library_private_types_in_public_api
   _ChartState createState() => _ChartState();
 }
 
@@ -33,7 +32,8 @@ class _ChartState extends State<Chart> {
 
   int time = 7;
 
-  Future<List<FlSpot>> fetchData(String token, String label, int time) async {
+  Future<List<Map<String, dynamic>>> fetchData(
+      String token, String label, int time) async {
     if (label == 'Humidity') {
       return await fetchloghumidata(token, time);
     } else {
@@ -43,25 +43,41 @@ class _ChartState extends State<Chart> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<FlSpot>>(
+    return FutureBuilder<List<Map<String, dynamic>>>(
       future: fetchData(widget.token, widget.label, time),
       builder: (context, snapshot) {
-        //! loadings
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const CircularProgressIndicator();
+          return const Center(child: CircularProgressIndicator());
         } else if (snapshot.hasError) {
-          return Text('Error: ${snapshot.error}');
+          return Center(child: Text('Error: ${snapshot.error}'));
         } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Text('No data available');
+          return const Center(child: Text('No data available'));
         }
 
-        List<FlSpot> spots = snapshot.data!;
+        // Tạo danh sách FlSpot từ dữ liệu
+        List<FlSpot> spots = snapshot.data!.asMap().entries.map((entry) {
+          int index = entry.key;
+          Map<String, dynamic> dataPoint = entry.value;
 
+          // Lấy FlSpot từ dữ liệu
+          FlSpot spot = dataPoint['spot'];
+
+          // Truy xuất giá trị x và y từ FlSpot
+          double xValue = index.toDouble();
+
+          double yValue = spot.y;
+
+          return FlSpot(xValue, yValue);
+        }).toList();
+
+        // Kiểm tra dữ liệu invalid (NaN hoặc Infinity)
         if (spots.any((spot) => spot.y.isNaN || spot.y.isInfinite)) {
-          return const Text('Invalid data points');
+          return const Center(child: Text('Invalid data points'));
         }
 
+        // Tính maxX và maxY từ dữ liệu thực tế
         double maxX = spots.map((spot) => spot.x).reduce(max);
+        double minX = spots.map((spot) => spot.x).reduce(min);
         double maxY = spots.map((spot) => spot.y).reduce(max) + 10;
 
         return CustomCard(
@@ -112,13 +128,10 @@ class _ChartState extends State<Chart> {
                 aspectRatio: Responsive.isMobile(context) ? 9 / 4 : 16 / 6,
                 child: LineChart(
                   LineChartData(
-                    lineTouchData: const LineTouchData(
-                      handleBuiltInTouches: true,
-                    ),
+                    lineTouchData:
+                        const LineTouchData(handleBuiltInTouches: true),
                     gridData: const FlGridData(show: false),
                     titlesData: FlTitlesData(
-                      // ! đang lỗi ở đây
-
                       bottomTitles: AxisTitles(
                         sideTitles: SideTitles(
                           showTitles: true,
@@ -126,14 +139,10 @@ class _ChartState extends State<Chart> {
                           interval: 1,
                           getTitlesWidget: (double value, TitleMeta meta) {
                             int index = value.toInt();
-                            // Đảm bảo index không vượt quá số lượng dữ liệu
-                            if (index < spots.length) {
-                              // Lấy giá trị x từ spots và chuyển đổi sang DateTime
-                              DateTime date = DateTime.now().subtract(
-                                  Duration(days: (spots.length - index)));
+                            if (index < snapshot.data!.length) {
+                              DateTime date = snapshot.data![index]['date'];
                               String formattedDate =
                                   '${date.month}-${date.day}';
-
                               return SideTitleWidget(
                                 axisSide: meta.axisSide,
                                 space: 2,
@@ -152,19 +161,19 @@ class _ChartState extends State<Chart> {
                           },
                         ),
                       ),
-
                       rightTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false),
-                      ),
+                          sideTitles: SideTitles(showTitles: false)),
                       topTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false),
-                      ),
+                          sideTitles: SideTitles(showTitles: false)),
                       leftTitles: AxisTitles(
                         sideTitles: SideTitles(
                           getTitlesWidget: (double value, TitleMeta meta) {
+                            if (value == maxY) {
+                              return const SizedBox(); // Trả về widget rỗng nếu là maxY
+                            }
                             return leftTitle[value.toInt()] != null
                                 ? Text(
-                                    leftTitle[value.toInt()].toString(),
+                                    leftTitle[value.toInt()]!,
                                     style: TextStyle(
                                       fontSize:
                                           Responsive.isMobile(context) ? 9 : 12,
@@ -182,7 +191,7 @@ class _ChartState extends State<Chart> {
                     borderData: FlBorderData(show: false),
                     lineBarsData: [
                       LineChartBarData(
-                        isCurved: true,
+                        isCurved: false,
                         curveSmoothness: 0.2,
                         color: widget.label == 'Humidity'
                             ? const Color.fromARGB(87, 1, 35, 255)
@@ -219,10 +228,10 @@ class _ChartState extends State<Chart> {
                         spots: spots,
                       ),
                     ],
-                    minX: 0,
-                    maxX: maxX,
+                    minX: minX,
+                    maxX: maxX, // Đảm bảo maxX chính xác
                     minY: 0,
-                    maxY: maxY,
+                    maxY: maxY, // Đảm bảo maxY chính xác
                   ),
                 ),
               ),

@@ -26,6 +26,9 @@ class RelayScreen extends StatefulWidget {
 }
 
 class _RelayScreenState extends State<RelayScreen> {
+  // final bool _isHovered = false; // To detect hover
+  final bool _isTapped = false; // To detect tap (for mobile)
+  int? _hoveredIndex;
   List<Relay> relays = [];
   List<Relay> homeRelays = [];
   final TextEditingController _idController = TextEditingController();
@@ -503,89 +506,6 @@ class _RelayScreenState extends State<RelayScreen> {
       }
     }
 
-    // Display warning if a relay is already added
-    // for (var relayName in alreadyAddedRelays) {
-    //   ScaffoldMessenger.of(context).showSnackBar(
-    //     SnackBar(
-    //         content: Text('$relayName is already added to the home screen')),
-    //   );
-    // }
-
-    for (int i = 0; i < relays.length; i++) {
-      if (!_isSelected[i] && alreadyAddedRelays.contains(relays[i].name)) {
-        flagRemoveFromHome = true;
-        bool removeHome = await setRelayToHomeAPI(relays[i].id, false);
-        if (removeHome) {
-          amountRemoveFromHome++;
-          homeRelays.remove(
-              relays[i]); // Remove from homeRelays if API call is successful
-        }
-      }
-    }
-
-    if (flagRemoveFromHome) {
-      flagRemoveFromHome = false;
-      // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content:
-                Text('$amountRemoveFromHome relays removed to home screen!')),
-      );
-      amountRemoveFromHome = 0;
-    }
-
-    // Check if adding selected relays exceeds the limit of 4
-    if (selectedRelays.length > maxRelaysAllowAddToScreen ||
-        existingHomeRelayIds.length == maxRelaysAllowAddToScreen) {
-      // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Max relay add to home is 4')),
-      );
-    } else {
-      // Add each selected relay by calling the API
-      int numOfRelaysAdded = 0;
-      for (var relay in selectedRelays) {
-        if (!alreadyAddedRelays.contains(relay.name)) {
-          bool isAdded = await setRelayToHomeAPI(relay.id, true);
-          if (isAdded) {
-            homeRelays
-                .add(relay); // Add to homeRelays if API call is successful
-            numOfRelaysAdded++;
-          }
-        }
-      }
-      // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text("$numOfRelaysAdded relay added to home screen!")),
-      );
-    }
-
-    setState(() {
-      _selectMode = false; // Disable selection mode
-    });
-  }
-
-  void _confirmDeleteRelays() async {
-    // Fetch relays already on the home screen
-    bool flagRemoveFromHome = false;
-    int maxRelaysAllowAddToScreen =
-        4; // Maximum relays allowed add to Home screen
-    int amountRemoveFromHome = 0;
-    List<String> existingHomeRelayIds = await fetchHomeRelays();
-    List<Relay> selectedRelays = [];
-    List<String> alreadyAddedRelays = [];
-
-    // Collect selected relays and check if they're already added
-    for (int i = 0; i < relays.length; i++) {
-      if (existingHomeRelayIds.contains(relays[i].id)) {
-        alreadyAddedRelays.add(relays[i].name);
-      }
-      if (_isSelected[i]) {
-        selectedRelays.add(relays[i]);
-      }
-    }
-
     for (int i = 0; i < relays.length; i++) {
       if (!_isSelected[i] && alreadyAddedRelays.contains(relays[i].name)) {
         flagRemoveFromHome = true;
@@ -744,26 +664,28 @@ class _RelayScreenState extends State<RelayScreen> {
 
   @override
   Widget build(BuildContext context) {
-    var screenWidth = MediaQuery.of(context).size.width;
+    // var screenWidth = MediaQuery.of(context).size.width;
 
-    int crossAxisCount = screenWidth > 600 ? 2 : 1;
-    double childAspectRatio = screenWidth > 600 ? 6.0 : 4.0;
+    // int crossAxisCount = screenWidth > 600 ? 2 : 1;
+    // double childAspectRatio = screenWidth > 600 ? 6.0 : 4.0;
 
     return Scaffold(
       drawer: const Navbar_left(),
       appBar: _buildAppBar(),
       body: Stack(
         children: [
-          _buildGridView(crossAxisCount, childAspectRatio),
+          _buildRelayList(),
           if (_isAddToHomeMode)
             Positioned(
               bottom: 20,
               left: 20,
+              
               child: FloatingActionButton.extended(
+                
                 onPressed: _confirmAddToHome,
                 label: const Text('Add to home'),
                 icon: const Icon(Icons.home_work_sharp),
-                backgroundColor: Colors.blueAccent,
+                backgroundColor: const Color.fromARGB(255, 255, 255, 255),
               ),
             ),
         ],
@@ -782,6 +704,48 @@ class _RelayScreenState extends State<RelayScreen> {
     });
   }
 
+  // PreferredSize _buildAppBar() {
+  //   return PreferredSize(
+  //     preferredSize: const Size.fromHeight(kToolbarHeight), // Set AppBar height
+  //     child: Container(
+  //       decoration: const BoxDecoration(
+  //         gradient: LinearGradient(
+  //           colors: [
+  //             Color.fromARGB(255, 106, 197, 224),
+  //             Color.fromARGB(255, 10, 117, 232)
+  //           ], // Gradient colors
+  //           begin: Alignment.topLeft, // Start point of the gradient
+  //           end: Alignment.bottomRight, // End point of the gradient
+  //         ),
+  //       ),
+  //       child: AppBar(
+  //         title: const Text(
+  //           'Schedule',
+  //           style: TextStyle(
+  //             fontSize: 24, // Set the font size
+  //             fontWeight: FontWeight.w600, // Semi-bold font weight
+  //             color: Colors.white, // Text color
+  //             letterSpacing: 1.2, // Letter spacing for readability
+  //             fontFamily: 'avenir', // Use a custom font family (optional)
+  //           ),
+  //         ),
+  //         centerTitle: true,
+  //         actions: [
+  //           if (_showDeleteIcon || _showEditIcon || _isAddToHomeMode)
+  //             IconButton(
+  //               icon: const Icon(Icons.cancel),
+  //               onPressed: _resetToNormalMode,
+  //             ),
+  //         ],
+  //         backgroundColor: Colors
+  //             .transparent, // Set to transparent because gradient is applied to Container
+  //         elevation:
+  //             0, // Remove elevation as the gradient is handling the visual effect
+  //       ),
+  //     ),
+  //   );
+  // }
+
   AppBar _buildAppBar() {
     return AppBar(
       title: const Text('Relay', style: TextStyle(fontSize: 24)),
@@ -792,107 +756,252 @@ class _RelayScreenState extends State<RelayScreen> {
             onPressed: _resetToNormalMode,
           ),
       ],
-      backgroundColor: Colors.blueAccent,
+      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
     );
   }
 
-  GridView _buildGridView(int crossAxisCount, double childAspectRatio) {
-    return GridView.builder(
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: crossAxisCount,
-        crossAxisSpacing: 8.0,
-        mainAxisSpacing: 8.0,
-        childAspectRatio: childAspectRatio,
-      ),
-      itemCount: relays.length,
-      itemBuilder: (context, index) {
-        return _buildRelayCard(index);
-      },
-    );
-  }
 
-  Card _buildRelayCard(int index) {
-    bool isAlreadyAddedToHome = homeRelays.contains(relays[index]);
-    // bool isSelected = _isSelected[index] ||
-    //     isAlreadyAddedToHome; // Pre-select if already added
-    return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15.0),
-      ),
-      elevation: 5, // Height
-      margin: const EdgeInsets.all(8.0),
-      child: ListTile(
-        leading: _selectMode
-            ? Checkbox(
-                value: _isSelected[index],
-                onChanged: (value) {
-                  setState(() {
-                    _isSelected[index] = value!;
-                  });
-                },
-              )
-            : Icon(
-                isAlreadyAddedToHome
-                    ? Icons.home_work_sharp // Icon if already added
-                    : Icons.electrical_services_rounded,
-                color: Colors.blueAccent,
-                size: 30,
-              ),
-        title: Text(
-          relays[index].name,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
+
+  Widget _buildRelayList() {
+    var screenWidth = MediaQuery.of(context).size.width;
+
+    // Determine number of columns based on screen width
+    int crossAxisCount = screenWidth > 800 ? 2 : 1;
+
+    // Calculate childAspectRatio for different screen sizes (optional)
+    double childAspectRatio = screenWidth > 1350
+        ? 7.0
+        : screenWidth > 1150
+            ? 6.5
+            : screenWidth > 950
+                ? 5.5
+                : screenWidth > 800
+                    ? 4.5
+                    : 4.0;
+
+    return CustomScrollView(
+      physics: const BouncingScrollPhysics(), // Bouncing scroll effect
+      slivers: [
+        SliverGrid(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              return _buildRelayCard(index); // Build each schedule card
+            },
+            childCount: relays.length,
+          ),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount:
+                crossAxisCount, // Number of columns based on screen width
+            crossAxisSpacing: 8.0, // Horizontal space between items
+            mainAxisSpacing: 8.0, // Vertical space between items
+            childAspectRatio: childAspectRatio, // Aspect ratio of each card
           ),
         ),
-        subtitle: _buildRelaySubtitle(index),
-        trailing: _buildRelayTrailingActions(index),
+        // Add extra padding at the bottom (same as before)
+        const SliverPadding(
+          padding:
+              EdgeInsets.only(bottom: 200), // Adjust based on your card height
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRelayCard(int index) {
+    bool isAlreadyAddedToHome = homeRelays.contains(relays[index]);
+    Color backgroundColor = relays[index].isOn
+        ? const Color(0xFF6448FE) // Active state (with gradient)
+        : const Color.fromARGB(
+            255, 187, 176, 176); // Inactive state (gray color)
+
+    return GestureDetector(
+      onTap: () {
+        // Call _editSchedule function when the card is tapped
+        _editRelay(index);
+      },
+      child: MouseRegion(
+        onEnter: (_) {
+          setState(() {
+            _hoveredIndex = index; // Track the hovered card's index
+          });
+        },
+        onExit: (_) {
+          setState(() {
+            _hoveredIndex = null; // Reset when the mouse exits the card
+          });
+        },
+        child: TweenAnimationBuilder(
+          tween: Tween<double>(
+              begin: 1.0,
+              end: _hoveredIndex == index || _isTapped ? 1.05 : 1.0),
+          duration: const Duration(milliseconds: 150),
+          builder: (context, scale, child) {
+            return Card(
+              elevation: _hoveredIndex == index || _isTapped
+                  ? 10
+                  : 5, // Elevation change only for the hovered card
+              margin: const EdgeInsets.all(8.0),
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(24)),
+              ),
+              child: Transform.scale(
+                scale: scale, // Apply scaling animation
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: relays[index].isOn
+                        ? const LinearGradient(
+                            colors: [
+                              Color(0xFF6448FE),
+                              Color.fromARGB(255, 12, 84, 123)
+                            ],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          )
+                        : null, // No gradient if inactive
+                    color: !relays[index].isOn
+                        ? backgroundColor
+                        : null, // Apply gray if inactive
+                    boxShadow: [
+                      BoxShadow(
+                        color: [
+                          const Color.fromARGB(255, 19, 76, 130),
+                          const Color(0xFF5FC6FF)
+                        ].last.withOpacity(0.4),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                        offset: const Offset(4, 4),
+                      ),
+                    ],
+                    borderRadius: const BorderRadius.all(Radius.circular(24)),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // First Column: Icon or Checkbox
+                        _selectMode
+                            ? Checkbox(
+                                value: _isSelected[index],
+                                onChanged: (value) {
+                                  setState(() {
+                                    _isSelected[index] = value!;
+                                  });
+                                },
+                              )
+                            : Icon(
+                                isAlreadyAddedToHome
+                                    ? Icons
+                                        .home_work_sharp // Icon if already added
+                                    : Icons.electrical_services_rounded,
+                                color: const Color.fromARGB(255, 255, 255, 255),
+                                size: 30,
+                              ),
+                        const SizedBox(
+                            width:
+                                8), // Space between icon/checkbox and next column
+
+                        // Second Column: Name, ID, Status
+                        Expanded(
+                          flex: 4,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                relays[index].name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 20,
+                                  color: Colors.white,
+                                  fontFamily: 'avenir',
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                              const SizedBox(height: 2),
+                              _buildRelaySubtitle(
+                                  index), // Displays ID and Status
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8), // Space between columns
+
+                        // Fourth Column: Trailing Actions
+                        Expanded(
+                          flex: 2,
+                          child: _buildRelayTrailingActions(index),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }
 
-  Row _buildRelayTrailingActions(int index) {
-    bool isSelected = _isSelected[index];
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+  Column _buildRelaySubtitle(int index) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (_isAddToHomeMode)
-          Checkbox(
-            value: isSelected, // Reflect current selection state
-            onChanged: (bool? value) {
-              setState(() {
-                _isSelected[index] =
-                    value ?? false; // Allow toggling for all relays
-              });
-            },
-          ),
-        if (_showDeleteIcon)
-          IconButton(
-            icon: const Icon(Icons.delete, color: Colors.red),
-            onPressed: () => _deleteRelay(index),
-          ),
-        if (!_showDeleteIcon &&
-            !_isAddToHomeMode &&
-            !_showEditIcon) // Don't show Switch in delete, select and adHome mode
-          Switch(
-            value: relays[index].isOn,
-            activeColor: Colors.green,
-            onChanged: (bool value) async {
-              setState(() {
-                relays[index].isOn = value;
-              });
-              await setRelayStatusAPI(relays[index].id, value);
-            },
-          ),
-        if (_showEditIcon)
-          IconButton(
-            icon: const Icon(Icons.edit, color: Colors.blueAccent),
-            onPressed: () {
-              _editRelay(index);
-            },
-          ),
+        Text(
+          'ID: ${relays[index].id}',
+          style: const TextStyle(color: Colors.white, fontFamily: 'avenir'),
+        ),
       ],
+    );
+  }
+
+  Center _buildRelayTrailingActions(int index) {
+    bool isSelected = _isSelected[index];
+    return Center(
+      // Center the Row
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center, // Center vertically
+        children: [
+          if (_isAddToHomeMode)
+            Checkbox(
+              value: isSelected, // Reflect current selection state
+              onChanged: (bool? value) {
+                setState(() {
+                  _isSelected[index] =
+                      value ?? false; // Allow toggling for all relays
+                });
+              },
+            ),
+          if (_showDeleteIcon)
+            IconButton(
+              icon: const Icon(Icons.delete,
+                  color: Color.fromARGB(255, 237, 230, 230)),
+              onPressed: () => _deleteRelay(index),
+            ),
+          if (!_showDeleteIcon &&
+              !_isAddToHomeMode &&
+              !_showEditIcon) // Don't show Switch in delete, select, and adHome mode
+            Switch(
+              value: relays[index].isOn,
+              activeColor: const Color.fromARGB(255, 252, 252, 252),
+              onChanged: (bool value) async {
+                setState(() {
+                  relays[index].isOn = value;
+                });
+                await setRelayStatusAPI(relays[index].id, value);
+              },
+            ),
+          if (_showEditIcon)
+            IconButton(
+              icon: const Icon(Icons.edit,
+                  color: Color.fromARGB(255, 230, 231, 233)),
+              onPressed: () {
+                _editRelay(index);
+              },
+            ),
+        ],
+      ),
     );
   }
 
@@ -957,116 +1066,6 @@ class _RelayScreenState extends State<RelayScreen> {
           _resetToNormalMode();
         }
       },
-    );
-  }
-
-  // SpeedDial _buildSpeedDial() {
-  //   return SpeedDial(
-  //     icon: Icons.menu_open_rounded,
-  //     backgroundColor: Colors.blueAccent,
-  //     // Optionally, remove the label from the SpeedDial itself if you want the hover behavior
-  //     children: [
-  //       SpeedDialChild(
-  //         child: const Tooltip(
-  //           message: 'Add Relay', // This will show when hovered
-  //           child: Icon(Icons.add, color: Colors.blue), // Blue color for icon
-  //         ),
-  //         // label: '', // Hide the label here
-  //         onTap: _addRelay,
-  //       ),
-  //       SpeedDialChild(
-  //         child: const Tooltip(
-  //           message: 'Delete Relay', // Show label on hover
-  //           child: Icon(Icons.delete_outline, color: Colors.blue),
-  //         ),
-  //         // label: '', // Hide label by default
-  //         onTap: () {
-  //           setState(() {
-  //             _showDeleteIcon = true;
-  //             _showEditIcon = false;
-  //             _isAddToHomeMode = false;
-  //             _selectMode = false;
-  //             // _toggleSelectMode();
-  //           });
-  //         },
-  //       ),
-  //       SpeedDialChild(
-  //         child: const Tooltip(
-  //           message: 'Add to Home',
-  //           child: Icon(Icons.home_work_sharp, color: Colors.blue),
-  //         ),
-  //         // label: '',
-  //         onTap: () {
-  //           setState(() {
-  //             _showDeleteIcon = false;
-  //             _showEditIcon = false;
-  //             // _isAddToHomeMode = true;
-  //             _toggleAddToHomeMode();
-  //             // _isSelected =
-  //             //     List.filled(relays.length, false); // Reset all checkboxes
-  //           });
-  //         },
-  //       ),
-  //       SpeedDialChild(
-  //         child: const Tooltip(
-  //           message: 'Rename', // Show label on hover
-  //           // child: Colors.white,
-  //           child: Icon(Icons.edit_note_sharp, color: Colors.blue),
-  //         ),
-  //         // label: '', // Hide label by default
-  //         onTap: () {
-  //           setState(() {
-  //             _isAddToHomeMode = false;
-  //             _showEditIcon = true;
-  //             _showDeleteIcon = false;
-  //             _selectMode = false;
-  //           });
-  //         },
-  //       ),
-  //       // SpeedDialChild(
-  //       //   child: const Tooltip(
-  //       //     message: 'Home', // Show label on hover
-  //       //     child: Icon(Icons.home, color: Colors.blue),
-  //       //   ),
-  //       //   label: '', // Hide label by default
-  //       //   onTap: () {
-  //       //     setState(() {
-  //       //       _resetToNormalMode();
-  //       //     });
-  //       //   },
-  //       // ),
-  //     ],
-  //   );
-  // }
-
-  // // Checkbox _buildCheckbox(int index) {
-  // //   return Checkbox(
-  // //     value: _isSelected[index],
-  // //     onChanged: (bool? value) {
-  // //       setState(() {
-  // //         _isSelected[index] = value ?? false;
-  // //       });
-  // //     },
-  // //   );
-  // // }
-
-  Column _buildRelaySubtitle(int index) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'ID: ${relays[index].id}',
-          style: const TextStyle(fontSize: 16),
-        ),
-        Text(
-          relays[index].isOn ? 'Status: ON' : 'Status: OFF',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: relays[index].isOn ? Colors.green : Colors.red,
-          ),
-        ),
-      ],
     );
   }
 }

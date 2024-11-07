@@ -1,11 +1,13 @@
+// import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend_daktmt/nav_bar/nav_bar_left.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:numberpicker/numberpicker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-// import 'package:intl/intl.dart';
+// import 'dart:math' as math;
 
 class Relay {
   String id;
@@ -38,7 +40,7 @@ class Schedule {
   String id;
   String name;
   bool isOn;
-  String day;
+  List<String> day;
   String time;
   List<Action> actions;
 
@@ -56,7 +58,7 @@ class Schedule {
       id: json['schedule_id']?.toString() ?? '',
       name: json['schedule_name'] ?? '',
       isOn: json['state'] as bool,
-      day: (json['day'] as List<dynamic>).join(', '),
+      day: List<String>.from(json['day']), // Parse `day` as List<String>
       time: json['time'],
       actions: (json['actions'] as List<dynamic>)
           .map((actionJson) => Action.fromJson(actionJson))
@@ -73,6 +75,9 @@ class ScheduleScreen extends StatefulWidget {
 }
 
 class _ScheduleScreenState extends State<ScheduleScreen> {
+  // final bool _isHovered = false; // To detect hover
+  final bool _isTapped = false; // To detect tap (for mobile)
+  int? _hoveredIndex;
   final TextEditingController _nameController = TextEditingController();
   final List<String> _days = [
     "Monday",
@@ -116,18 +121,60 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       _selectedDays[day] = false;
     }
     _isSelectedRelays = List<bool>.filled(relays.length, false);
-    fetchSchedulesAPI(); // Fetch relays when the screen initializes
+    // fetchSchedulesAPI(); // Fetch relays when the screen initializes
+    loadSchedulesFromPrefs();
     _isSelected = List.generate(
       schedules.length,
       (index) => false,
     );
   }
 
+  // Future<void> fetchSchedulesAPI() async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   var token = prefs.getString('accessToken')!;
+  //   final baseUrl = dotenv.env['API_BASE_URL']!;
+  //   final url = Uri.parse('http://$baseUrl/schedule/get');
+  //   try {
+  //     final response = await http.get(url, headers: {
+  //       'Authorization': 'Bearer $token',
+  //     });
+
+  //     if (response.statusCode == 200) {
+  //       final responseData = json.decode(response.body);
+
+  //       if (responseData is List) {
+  //         List<Schedule> fetchedSchedules = responseData
+  //             .map<Schedule>((scheduleJson) => Schedule.fromJson(scheduleJson))
+  //             .toList();
+
+  //         await prefs.setString('schedules', json.encode(responseData));
+
+  //         setState(() {
+  //           schedules = fetchedSchedules;
+  //           _isSelected = List.generate(schedules.length, (_) => false);
+  //         });
+  //         print("Success to fetch schedules");
+  //       } else {
+  //         setState(() {
+  //           relays = [];
+  //           _isSelected = [];
+  //         });
+  //         print("Unexpected response format: ${response.body}");
+  //       }
+  //     } else {
+  //       print("Failed to fetch relays: ${response.body}");
+  //     }
+  //   } catch (e) {
+  //     print("Error occurred: $e");
+  //   }
+  // }
+
   Future<void> fetchSchedulesAPI() async {
     final prefs = await SharedPreferences.getInstance();
     var token = prefs.getString('accessToken')!;
     final baseUrl = dotenv.env['API_BASE_URL']!;
     final url = Uri.parse('http://$baseUrl/schedule/get');
+
     try {
       final response = await http.get(url, headers: {
         'Authorization': 'Bearer $token',
@@ -141,23 +188,49 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               .map<Schedule>((scheduleJson) => Schedule.fromJson(scheduleJson))
               .toList();
 
+          // Save schedules to SharedPreferences
+          await prefs.setString('schedules', json.encode(responseData));
+
           setState(() {
             schedules = fetchedSchedules;
             _isSelected = List.generate(schedules.length, (_) => false);
           });
+
           print("Success to fetch schedules");
         } else {
           setState(() {
-            relays = [];
+            schedules = [];
             _isSelected = [];
           });
           print("Unexpected response format: ${response.body}");
         }
       } else {
-        print("Failed to fetch relays: ${response.body}");
+        print("Failed to fetch schedules: ${response.body}");
       }
     } catch (e) {
       print("Error occurred: $e");
+    }
+  }
+
+  Future<void> loadSchedulesFromPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? schedulesJson = prefs.getString('schedules');
+
+    if (schedulesJson != null) {
+      List<dynamic> decoded = json.decode(schedulesJson);
+      List<Schedule> loadedSchedules = decoded
+          .map<Schedule>((scheduleJson) => Schedule.fromJson(scheduleJson))
+          .toList();
+
+      setState(() {
+        schedules = loadedSchedules;
+        _isSelected = List.generate(schedules.length, (_) => false);
+      });
+
+      print("Schedules loaded from SharedPreferences");
+    } else {
+      print("No schedules found in SharedPreferences.");
+      fetchSchedulesAPI(); // Fallback to API if no cached data
     }
   }
 
@@ -221,7 +294,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   void _editSchedule(int index) async {
+    selectedRelays.clear();
     indexScheduleEdit = index;
+
+    await fetchRelaysAPI();
 
     // Set name
     _nameController.text = schedules[index].name;
@@ -234,39 +310,51 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     // Set time
     selectedTime = parseTimeString(schedules[index].time);
 
-    await fetchRelaysAPI();
-
     for (int i = 0; i < relays.length; i++) {
-      // Find the action for the current relay, allowing a null result if no match
       Action? relayAction = schedules[index].actions.firstWhere(
             (action) => action.relayId == int.tryParse(relays[i].id),
-            orElse: () => Action(
-                relayId: int.parse(relays[i].id),
-                action: "OFF"), // Provide a default Action if not found
+            orElse: () =>
+                Action(relayId: int.parse(relays[i].id), action: "OFF"),
           );
 
-      // Set isSetChedule based on the action's state
       relays[i].isSetChedule = (relayAction.action == "ON");
       _isSelectedRelays[i] = schedules[index]
           .actions
           .any((action) => action.relayId == int.tryParse(relays[i].id));
     }
+
     showDialog(
       context: context,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: const Text("Edit Schedule"),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
+              backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+              title: const Center(
+                // Center the title text
+                child: Text(
+                  "Edit Schedule",
+                  style: TextStyle(
+                    fontSize: 20, // Set the font size
+                    fontWeight: FontWeight.w600, // Semi-bold font weight
+                    color: Color.fromARGB(255, 80, 73, 73), // Text color
+                    letterSpacing: 1.2, // Letter spacing for readability
+                    fontFamily: 'avenir', // Use a custom font family (optional)
+                  ),
+                ),
+              ),
               content: SingleChildScrollView(
                 child: Column(
                   children: [
                     _buildNewNameField(setState),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     _buildNewDaysSelection(setState),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     _buildNewTimeSelector(setState),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     _buildNewRelaysSelection(setState),
                   ],
                 ),
@@ -284,11 +372,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       controller: _nameController,
       decoration: InputDecoration(
         hintText: 'Eg: Relay-a',
-        labelText: "New Schedule name",
         border: OutlineInputBorder(
-          borderSide: BorderSide(
-            color: _nameError ? Colors.red : Colors.grey,
-          ),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: _nameError ? Colors.red : Colors.grey),
         ),
         errorText: _nameError ? _errorMessage : null,
       ),
@@ -305,17 +391,44 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("Select new days:"),
-        Wrap(
-          children: _days.map((day) {
-            return CheckboxListTile(
-              title: Text(day),
-              value: _selectedDays[day],
-              onChanged: (value) {
-                setState(() => _selectedDays[day] = value!);
-              },
-            );
-          }).toList(),
+        const Text(
+          "Select new days:",
+          style: TextStyle(
+            fontSize: 15, // Set the font size
+            fontWeight: FontWeight.w600, // Semi-bold font weight
+            color: Color.fromARGB(255, 80, 73, 73), // Text color
+            letterSpacing: 1.2, // Letter spacing for readability
+            fontFamily: 'avenir', // Use a custom font family (optional)
+          ),
+        ),
+        const SizedBox(height: 8),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: _days.map((day) {
+              String abbreviation = day.substring(0, 3); // Get first 3 letters
+              return Padding(
+                padding: const EdgeInsets.only(right: 10.0),
+                child: FilterChip(
+                  label: Text(
+                    abbreviation,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        // fontSize: 20,
+                        color: Colors.white,
+                        fontFamily: 'avenir'),
+                  ),
+                  selected: _selectedDays[day]!,
+                  showCheckmark: false,
+                  selectedColor: const Color.fromARGB(255, 29, 113, 181),
+                  backgroundColor: const Color.fromARGB(255, 200, 200, 200),
+                  onSelected: (value) {
+                    setState(() => _selectedDays[day] = value);
+                  },
+                ),
+              );
+            }).toList(),
+          ),
         ),
       ],
     );
@@ -323,16 +436,114 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   Widget _buildNewTimeSelector(StateSetter setState) {
     return ListTile(
-      title: Text("New time: ${selectedTime.format(context)}"),
+      title: Text(
+          "New time: ${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, "0")}"),
       trailing: const Icon(Icons.access_time),
-      onTap: () async {
-        TimeOfDay? pickedTime = await showTimePicker(
+      onTap: () {
+        // Show a dialog to pick the time using NumberPicker
+        showDialog(
           context: context,
-          initialTime: selectedTime,
+          builder: (context) {
+            return StatefulBuilder(
+              builder: (context, setStateDialog) {
+                return AlertDialog(
+                  title: const Text("Pick Time"),
+                  content: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // Hour Picker
+                            NumberPicker(
+                              value: selectedTime.hour,
+                              minValue: 0,
+                              maxValue: 23,
+                              step: 1,
+                              onChanged: (value) {
+                                setStateDialog(() {
+                                  selectedTime = TimeOfDay(
+                                    hour: value,
+                                    minute: selectedTime.minute,
+                                  );
+                                });
+                              },
+                            ),
+                            const Text(":", style: TextStyle(fontSize: 32)),
+                            // Minute Picker
+                            NumberPicker(
+                              value: selectedTime.minute,
+                              minValue: 0,
+                              maxValue: 59,
+                              step: 1,
+                              onChanged: (value) {
+                                setStateDialog(() {
+                                  selectedTime = TimeOfDay(
+                                    hour: selectedTime.hour,
+                                    minute: value,
+                                  );
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  actions: [
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color.fromARGB(255, 90, 80,
+                            80), // Changed 'primary' to 'backgroundColor'
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        "Cancel",
+                        style: TextStyle(
+                          fontSize: 10, // Set the font size
+                          fontWeight: FontWeight.w600, // Semi-bold font weight
+                          color: Colors.white, // Text color
+                          letterSpacing: 1.2, // Letter spacing for readability
+                          fontFamily:
+                              'avenir', // Use a custom font family (optional)
+                        ),
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        setState(() {});
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color.fromARGB(255, 116, 143,
+                            190), // Changed 'primary' to 'backgroundColor'
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        "OK",
+                        style: TextStyle(
+                          fontSize: 10, // Set the font size
+                          fontWeight: FontWeight.w600, // Semi-bold font weight
+                          color: Colors.white, // Text color
+                          letterSpacing: 1.2, // Letter spacing for readability
+                          fontFamily:
+                              'avenir', // Use a custom font family (optional)
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
         );
-        if (pickedTime != null) {
-          setState(() => selectedTime = pickedTime);
-        }
       },
     );
   }
@@ -341,31 +552,73 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("Select desired relay states:"),
+        const Text(
+          "Select desired relay states:",
+          style: TextStyle(
+            fontSize: 15, // Set the font size
+            fontWeight: FontWeight.w600, // Semi-bold font weight
+            color: Color.fromARGB(255, 80, 73, 73), // Text color
+            letterSpacing: 1.2, // Letter spacing for readability
+            fontFamily: 'avenir', // Use a custom font family (optional)
+          ),
+        ),
         ...relays.asMap().entries.map((entry) {
           int index = entry.key;
           var relay = entry.value;
 
-          return ListTile(
-            leading: Checkbox(
-              value: _isSelectedRelays[index],
-              onChanged: (bool? value) {
+          // Define the background color based on relay selection
+          Color backgroundColor = _isSelectedRelays[index]
+              ? const Color.fromARGB(255, 5, 74, 131)
+              : const Color.fromARGB(255, 207, 202, 202);
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: 6.0,
+              horizontal: 8.0,
+            ), // Add vertical and horizontal padding
+            child: GestureDetector(
+              onTap: () {
                 setState(() {
-                  _isSelectedRelays[index] = value ?? false;
+                  // Toggle selection state when the entire item is tapped
+                  _isSelectedRelays[index] = !_isSelectedRelays[index];
                 });
               },
-            ),
-            title: Text(relay.name),
-            subtitle:
-                Text("Desired state: ${relay.isSetChedule ? "ON" : "OFF"}"),
-            trailing: Switch(
-              value: relay.isSetChedule,
-              activeColor: Colors.green,
-              onChanged: (bool value) {
-                setState(() {
-                  relay.isSetChedule = value;
-                });
-              },
+              child: Container(
+                decoration: BoxDecoration(
+                  color: backgroundColor, // Set background color dynamically
+                  borderRadius: BorderRadius.circular(12), // Rounded corners
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 10.0,
+                  ), // Padding inside the ListTile
+                  title: Text(
+                    relay.name,
+                    style: const TextStyle(
+                      fontSize: 15, // Set the font size
+                      fontWeight: FontWeight.w600, // Semi-bold font weight
+                      color: Color.fromARGB(255, 251, 251, 251), // Text color
+                      letterSpacing: 1.2, // Letter spacing for readability
+                      fontFamily:
+                          'avenir', // Use a custom font family (optional)
+                    ),
+                  ),
+                  trailing: Switch(
+                    value: relay.isSetChedule,
+                    activeTrackColor: Colors
+                        .blue, // Custom color for the active track (background)
+                    inactiveThumbColor: const Color.fromARGB(255, 222, 213,
+                        213), // Custom color for the "off" thumb (circle)
+                    inactiveTrackColor: const Color.fromARGB(255, 235, 232,
+                        232), // Custom color for the "off" track (background)
+                    onChanged: (bool value) {
+                      setState(() {
+                        relay.isSetChedule = value;
+                      });
+                    },
+                  ),
+                ),
+              ),
             ),
           );
         }),
@@ -387,30 +640,24 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               _errorMessage = 'Schedule name already exists!';
             });
           } else {
-            setState(() {
-              _nameError = false;
-            });
-
-            for (int i = 0; i < relays.length; i++) {
-              if (_isSelectedRelays[i] &&
-                  !selectedRelays.any((relay) => relay.id == relays[i].id)) {
-                // Check whether the selected relays is added to selectedRelays list or not to add
-                selectedRelays.add(relays[i]);
-              }
-            }
+            _nameError = false;
+            selectedRelays = relays
+                .where((relay) =>
+                    _isSelectedRelays[relays.indexOf(relay)] &&
+                    !selectedRelays.contains(relay))
+                .toList();
 
             String relayName = _nameController.text;
             List<Map<String, dynamic>> action = selectedRelays.map((relay) {
               return {
                 "relayId": relay.id,
-                "action": relay.isSetChedule ? "OFF" : "ON",
+                "action": relay.isSetChedule ? "ON" : "OFF"
               };
             }).toList();
             List<String> selectedDaysList = _selectedDays.entries
                 .where((entry) => entry.value)
                 .map((entry) => entry.key)
                 .toList();
-
             String timeString = formatTimeOfDay(selectedTime);
 
             await editScheduleAPI(schedules[indexScheduleEdit].id, relayName,
@@ -422,22 +669,41 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           }
         },
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.blueAccent,
+            backgroundColor: const Color.fromARGB(255, 93, 128, 187),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+        child: const Text(
+          'Update',
+          style: TextStyle(
+            fontSize: 10, // Set the font size
+            fontWeight: FontWeight.w600, // Semi-bold font weight
+            color: Colors.white, // Text color
+            letterSpacing: 1.2, // Letter spacing for readability
+            fontFamily: 'avenir', // Use a custom font family (optional)
+          ),
         ),
-        child: const Text('Update'),
       ),
       ElevatedButton(
         onPressed: () {
-          // Clear the error state and controllers when cancelling
           _nameController.clear();
-          _nameError = false; // Clear error state
-          _errorMessage = ''; // Clear error message
+          _nameError = false;
+          _errorMessage = '';
           Navigator.of(context).pop();
         },
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.redAccent,
+            backgroundColor: const Color.fromARGB(255, 185, 163, 163),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+        child: const Text(
+          'Cancel',
+          style: TextStyle(
+            fontSize: 10, // Set the font size
+            fontWeight: FontWeight.w600, // Semi-bold font weight
+            color: Colors.white, // Text color
+            letterSpacing: 1.2, // Letter spacing for readability
+            fontFamily: 'avenir', // Use a custom font family (optional)
+          ),
         ),
-        child: const Text('Cancel'),
       ),
     ];
   }
@@ -506,16 +772,20 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: const Text("Add schedule"),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
+              title: const Text("Add schedule",
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               content: SingleChildScrollView(
                 child: Column(
                   children: [
                     _buildNameField(setState),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     _buildDaysSelection(setState),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     _buildTimeSelector(setState),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     _buildRelaysSelection(setState),
                   ],
                 ),
@@ -533,8 +803,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       controller: _nameController,
       decoration: InputDecoration(
         hintText: 'Name Schedule (required)',
-        labelText: "Schedule Name",
         border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide(
             color: _nameError ? Colors.red : Colors.grey,
           ),
@@ -554,17 +824,38 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("Select Days:"),
-        Wrap(
-          children: _days.map((day) {
-            return CheckboxListTile(
-              title: Text(day),
-              value: _selectedDays[day],
-              onChanged: (value) {
-                setState(() => _selectedDays[day] = value!);
-              },
-            );
-          }).toList(),
+        const Text(
+          "Select days:",
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 8),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: _days.map((day) {
+              String abbreviation = day.substring(0, 3); // Get first 3 letters
+              return Padding(
+                padding: const EdgeInsets.only(right: 10.0),
+                child: FilterChip(
+                  label: Text(
+                    abbreviation,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        // fontSize: 20,
+                        color: Colors.white,
+                        fontFamily: 'avenir'),
+                  ),
+                  selected: _selectedDays[day]!,
+                  showCheckmark: false,
+                  selectedColor: const Color.fromARGB(255, 29, 113, 181),
+                  backgroundColor: const Color.fromARGB(255, 200, 200, 200),
+                  onSelected: (value) {
+                    setState(() => _selectedDays[day] = value);
+                  },
+                ),
+              );
+            }).toList(),
+          ),
         ),
       ],
     );
@@ -572,16 +863,104 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   Widget _buildTimeSelector(StateSetter setState) {
     return ListTile(
-      title: Text("Time: ${selectedTime.format(context)}"),
+      title: Text(
+          "Selected time: ${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, "0")}"),
       trailing: const Icon(Icons.access_time),
-      onTap: () async {
-        TimeOfDay? pickedTime = await showTimePicker(
+      onTap: () {
+        // Show a dialog to pick the time using NumberPicker
+        showDialog(
           context: context,
-          initialTime: selectedTime,
+          builder: (context) {
+            return StatefulBuilder(
+              builder: (context, setStateDialog) {
+                return AlertDialog(
+                  title: const Text("Pick Time"),
+                  content: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // Hour Picker
+                            NumberPicker(
+                              value: selectedTime.hour,
+                              minValue: 0,
+                              maxValue: 23,
+                              step: 1,
+                              onChanged: (value) {
+                                setStateDialog(() {
+                                  selectedTime = TimeOfDay(
+                                    hour: value,
+                                    minute: selectedTime.minute,
+                                  );
+                                });
+                              },
+                            ),
+                            const Text(":", style: TextStyle(fontSize: 32)),
+                            // Minute Picker
+                            NumberPicker(
+                              value: selectedTime.minute,
+                              minValue: 0,
+                              maxValue: 59,
+                              step: 1,
+                              onChanged: (value) {
+                                setStateDialog(() {
+                                  selectedTime = TimeOfDay(
+                                    hour: selectedTime.hour,
+                                    minute: value,
+                                  );
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  actions: [
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color.fromARGB(255, 154, 135,
+                            135), // Changed 'primary' to 'backgroundColor'
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        "Cancel",
+                        style: TextStyle(
+                          fontSize: 10, // Set the font size
+                          fontWeight: FontWeight.w600, // Semi-bold font weight
+                          color: Colors.white, // Text color
+                          letterSpacing: 1.2, // Letter spacing for readability
+                          fontFamily:
+                              'avenir', // Use a custom font family (optional)
+                        ),
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        setState(() {});
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors
+                            .blueAccent, // Changed 'primary' to 'backgroundColor'
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text("OK"),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
         );
-        if (pickedTime != null) {
-          setState(() => selectedTime = pickedTime);
-        }
       },
     );
   }
@@ -651,7 +1030,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             List<Map<String, dynamic>> action = selectedRelays.map((relay) {
               return {
                 "relayId": relay.id,
-                "action": relay.isSetChedule ? "OFF" : "ON",
+                "action": relay.isSetChedule ? "ON" : "OFF",
               };
             }).toList();
             List<String> selectedDaysList = _selectedDays.entries
@@ -667,9 +1046,18 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           }
         },
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.blueAccent,
+          backgroundColor: const Color.fromARGB(255, 124, 149, 193),
         ),
-        child: const Text('Add'),
+        child: const Text(
+          'Add',
+          style: TextStyle(
+            fontSize: 10, // Set the font size
+            fontWeight: FontWeight.w600, // Semi-bold font weight
+            color: Colors.white, // Text color
+            letterSpacing: 1.2, // Letter spacing for readability
+            fontFamily: 'avenir', // Use a custom font family (optional)
+          ),
+        ),
       ),
       ElevatedButton(
         onPressed: () {
@@ -680,18 +1068,20 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           Navigator.of(context).pop();
         },
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.redAccent,
+          backgroundColor: const Color.fromARGB(255, 140, 123, 123),
         ),
-        child: const Text('Cancel'),
+        child: const Text(
+          'Cancel',
+          style: TextStyle(
+            fontSize: 10, // Set the font size
+            fontWeight: FontWeight.w600, // Semi-bold font weight
+            color: Colors.white, // Text color
+            letterSpacing: 1.2, // Letter spacing for readability
+            fontFamily: 'avenir', // Use a custom font family (optional)
+          ),
+        ),
       ),
     ];
-  }
-
-  void _toggleSelectMode() {
-    setState(() {
-      _selectMode = !_selectMode;
-      _isSelected = List.generate(schedules.length, (_) => false);
-    });
   }
 
   void _toggleShowEditIcon() {
@@ -849,7 +1239,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     return SpeedDial(
       icon: _showDeleteIcon || _showEditIcon
           ? Icons.cancel_presentation_rounded
-          : Icons.menu_open_rounded, // Change the icon based on the condition
+          : Icons.menu_open_rounded,
       backgroundColor: Colors.blueAccent,
       children: [
         SpeedDialChild(
@@ -894,131 +1284,358 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     );
   }
 
-  GridView _buildGridView(int crossAxisCount, double childAspectRatio) {
-    return GridView.builder(
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: crossAxisCount,
-        crossAxisSpacing: 8.0,
-        mainAxisSpacing: 8.0,
-        childAspectRatio: childAspectRatio,
-      ),
-      itemCount: schedules.length,
-      itemBuilder: (context, index) {
-        return _buildScheduleCard(index);
-      },
+  Widget _buildScheduleList() {
+    var screenWidth = MediaQuery.of(context).size.width;
+
+    // Determine number of columns based on screen width
+    int crossAxisCount = screenWidth > 800 ? 2 : 1;
+
+    // Calculate childAspectRatio for different screen sizes (optional)
+    double childAspectRatio = screenWidth > 1350
+        ? 7.0
+        : screenWidth > 1150
+            ? 6.5
+            : screenWidth > 950
+                ? 5.5
+                : screenWidth > 800
+                    ? 4.5
+                    : 4.0;
+
+    return CustomScrollView(
+      physics: const BouncingScrollPhysics(), // Bouncing scroll effect
+      slivers: [
+        SliverGrid(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              return _buildScheduleCard(index); // Build each schedule card
+            },
+            childCount: schedules.length,
+          ),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount:
+                crossAxisCount, // Number of columns based on screen width
+            crossAxisSpacing: 8.0, // Horizontal space between items
+            mainAxisSpacing: 8.0, // Vertical space between items
+            childAspectRatio: childAspectRatio, // Aspect ratio of each card
+          ),
+        ),
+        // Add extra padding at the bottom (same as before)
+        const SliverPadding(
+          padding:
+              EdgeInsets.only(bottom: 200), // Adjust based on your card height
+        ),
+      ],
     );
   }
 
-  AppBar _buildAppBar() {
-    return AppBar(
-      title: const Text('Schedule', style: TextStyle(fontSize: 24)),
-      actions: [
-        if (_showDeleteIcon || _showEditIcon)
-          IconButton(
-            icon: const Icon(Icons.cancel),
-            onPressed: _resetToNormalMode,
+  PreferredSize _buildAppBar() {
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(kToolbarHeight), // Set AppBar height
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color.fromARGB(255, 23, 80, 116),
+              Color.fromARGB(255, 7, 40, 75)
+            ], // Gradient colors
+            begin: Alignment.topLeft, // Start point of the gradient
+            end: Alignment.bottomRight, // End point of the gradient
           ),
-      ],
-      backgroundColor: Colors.blueAccent,
+        ),
+        child: AppBar(
+          title: const Text(
+            'Schedule',
+            style: TextStyle(
+              fontSize: 24, // Set the font size
+              fontWeight: FontWeight.w600, // Semi-bold font weight
+              color: Colors.white, // Text color
+              letterSpacing: 1.2, // Letter spacing for readability
+              fontFamily: 'avenir', // Use a custom font family (optional)
+            ),
+          ),
+          centerTitle: true,
+          actions: [
+            if (_showDeleteIcon || _showEditIcon)
+              IconButton(
+                icon: const Icon(Icons.cancel),
+                onPressed: _resetToNormalMode,
+              ),
+          ],
+          backgroundColor: Colors
+              .transparent, // Set to transparent because gradient is applied to Container
+          elevation:
+              0, // Remove elevation as the gradient is handling the visual effect
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    var screenWidth = MediaQuery.of(context).size.width;
-    int crossAxisCount = screenWidth > 600 ? 2 : 1;
-    double childAspectRatio = screenWidth > 600 ? 6.0 : 4.0;
-
     return Scaffold(
       appBar: _buildAppBar(),
       drawer: const Navbar_left(),
-      body: Stack(
-        children: [
-          _buildGridView(crossAxisCount, childAspectRatio),
-        ],
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color.fromARGB(255, 232, 235, 236), // Light blue
+              Color.fromARGB(255, 194, 235, 243), // White
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+
+        // Set background color of the body here
+        child: Stack(
+          children: [
+            _buildScheduleList(),
+            // _buildGridView(crossAxisCount, childAspectRatio),
+          ],
+        ),
       ),
       floatingActionButton: _buildSpeedDial(),
     );
   }
 
-  Card _buildScheduleCard(int index) {
-    return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15.0),
-      ),
-      elevation: 5, // Height
-      margin: const EdgeInsets.all(8.0),
-      child: ListTile(
-        leading: _selectMode
-            ? Checkbox(
-                value: _isSelected[index],
-                onChanged: (value) {
-                  setState(() => _isSelected[index] = value!);
-                },
-              )
-            : const Icon(
-                Icons.electrical_services_rounded,
-                color: Colors.blueAccent,
-                size: 30,
+  Widget _buildScheduleCard(int index) {
+    Color backgroundColor = schedules[index].isOn
+        ? const Color(0xFF6448FE) // Active state (with gradient)
+        : const Color.fromARGB(
+            255, 187, 176, 176); // Inactive state (gray color)
+
+    return GestureDetector(
+      // onTap: () {
+      //   setState(() {
+      //     _isTapped = !_isTapped; // Toggle the tapped state
+      //   });
+      // },
+      onTap: () {
+        // Call _editSchedule function when the card is tapped
+        _editSchedule(index);
+      },
+      child: MouseRegion(
+        onEnter: (_) {
+          setState(() {
+            _hoveredIndex = index; // Track the hovered card's index
+          });
+        },
+        onExit: (_) {
+          setState(() {
+            _hoveredIndex = null; // Reset when the mouse exits the card
+          });
+        },
+        child: TweenAnimationBuilder(
+          tween: Tween<double>(
+              begin: 1.0,
+              end: _hoveredIndex == index || _isTapped ? 1.05 : 1.0),
+          duration: const Duration(milliseconds: 150),
+          builder: (context, scale, child) {
+            return Card(
+              elevation: _hoveredIndex == index || _isTapped
+                  ? 10
+                  : 5, // Elevation change only for the hovered card
+              margin: const EdgeInsets.all(8.0),
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(24)),
               ),
-        title:
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text(
-            schedules[index].name,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Row(
-            // crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildScheduleSubtitle(index),
-              Text("Day: ${schedules[index].day}"),
-              Text("Time: ${schedules[index].time}"),
-            ],
-          ),
-        ]),
-        // subtitle: _buildRelaySubtitle(index),
-        trailing: _buildScheduleTrailingActions(index),
+              child: Transform.scale(
+                scale: scale, // Apply scaling animation
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: schedules[index].isOn
+                        ? const LinearGradient(
+                            colors: [
+                              Color.fromARGB(255, 6, 33, 83),
+                              Color.fromARGB(255, 11, 9, 160)
+                            ],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          )
+                        : null, // No gradient if inactive
+                    color: !schedules[index].isOn
+                        ? backgroundColor
+                        : null, // Apply gray if inactive
+                    boxShadow: [
+                      BoxShadow(
+                        color: [
+                          const Color.fromARGB(255, 19, 76, 130),
+                          const Color(0xFF5FC6FF)
+                        ].last.withOpacity(0.4),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                        offset: const Offset(4, 4),
+                      ),
+                    ],
+                    borderRadius: const BorderRadius.all(Radius.circular(24)),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // First Column: Icon or Checkbox
+                        _selectMode
+                            ? Checkbox(
+                                value: _isSelected[index],
+                                onChanged: (value) {
+                                  setState(() => _isSelected[index] = value!);
+                                },
+                              )
+                            : const Icon(
+                                Icons.timer_rounded,
+                                color: Colors.white,
+                                size: 30,
+                              ),
+                        const SizedBox(
+                            width:
+                                8), // Space between icon/checkbox and next column
+
+                        // Second Column: Name, ID, Status
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                schedules[index].name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 20,
+                                  color: Colors.white,
+                                  fontFamily: 'avenir',
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                              const SizedBox(height: 2),
+                              _buildScheduleSubtitle(
+                                  index), // Displays ID and Status
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8), // Space between columns
+
+                        // Third Column: Day and Time Info (centered)
+                        Expanded(
+                          flex: 5,
+                          child: Center(
+                            child: SizedBox(
+                              width: 200,
+                              child: _buildDayAndTimeInfo(index),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8), // Space between columns
+
+                        // Fourth Column: Trailing Actions
+                        Expanded(
+                          flex: 2,
+                          child: _buildScheduleTrailingActions(index),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }
 
-  Row _buildScheduleTrailingActions(int index) {
-    // bool isSelected = _isSelected[index];
+  Center _buildScheduleTrailingActions(int index) {
+    return Center(
+      // Center the Row
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center, // Center vertically
+        children: [
+          if (_showDeleteIcon)
+            IconButton(
+              icon: const Icon(Icons.delete,
+                  color: Color.fromARGB(255, 237, 230, 230)),
+              onPressed: () => _deleteSchedule(index),
+            ),
+          if (!_showDeleteIcon &&
+              !_showEditIcon) // Don't show Switch in delete, select, and adHome mode
+            Switch(
+              value: schedules[index].isOn,
+              activeTrackColor:
+                  Colors.blue, // Custom color for the active track (background)
+              inactiveThumbColor: const Color.fromARGB(255, 226, 222,
+                  222), // Custom color for the "off" thumb (circle)
+              inactiveTrackColor:
+                  Colors.grey, // Custom color for the "off" track (background)
+              activeColor: Colors.white,
+              onChanged: (bool value) async {
+                setState(() {
+                  schedules[index].isOn = value;
+                });
+                await setScheduleStatusAPI(schedules[index].id, value);
+              },
+            ),
+          if (_showEditIcon)
+            IconButton(
+              icon: const Icon(Icons.edit,
+                  color: Color.fromARGB(255, 230, 231, 233)),
+              onPressed: () {
+                _editSchedule(index);
+              },
+            ),
+        ],
+      ),
+    );
+  }
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+// Helper function to build day and time info
+  Widget _buildDayAndTimeInfo(int index) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (_showDeleteIcon)
-          IconButton(
-            icon: const Icon(Icons.delete, color: Colors.red),
-            onPressed: () => _deleteSchedule(index),
-          ),
-        if (!_showDeleteIcon &&
-            !_showEditIcon) // Don't show Switch in delete, select and adHome mode
-          Switch(
-            value: schedules[index].isOn,
-            activeColor: Colors.green,
-            onChanged: (bool value) async {
-              setState(() {
-                schedules[index].isOn = value;
-              });
-              await setScheduleStatusAPI(schedules[index].id, value);
-            },
-          ),
-        if (_showEditIcon)
-          IconButton(
-            icon: const Icon(Icons.edit, color: Colors.blueAccent),
-            onPressed: () {
-              // fetchInitialAction(index);
-              _editSchedule(index);
-            },
-          ),
+        Text(
+          "Day: ${getDayAbbreviation(schedules[index].day)}",
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
+          style: const TextStyle(color: Colors.white, fontFamily: 'avenir'),
+        ),
+        const SizedBox(height: 9),
+        Text(
+          "Time: ${schedules[index].time}",
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
+          style: const TextStyle(
+              color: Colors.white,
+              fontFamily: 'avenir',
+              fontSize: 15,
+              fontWeight: FontWeight.w100),
+        ),
       ],
     );
+  }
+
+  String getDayAbbreviation(List<String> days) {
+    Map<String, String> dayAbbreviations = {
+      'Monday': 'Mo',
+      'Tuesday': 'Tu',
+      'Wednesday': 'We',
+      'Thursday': 'Th',
+      'Friday': 'Fr',
+      'Saturday': 'Sa',
+      'Sunday': 'Su'
+    };
+
+    List<String> abbreviations = days
+        .map((day) => dayAbbreviations[day] ?? '')
+        .where((abbr) => abbr.isNotEmpty)
+        .toList();
+
+    return abbreviations.isNotEmpty
+        ? abbreviations.map((abbr) => '[$abbr]').join('')
+        : 'No valid days';
   }
 
   Column _buildScheduleSubtitle(int index) {
@@ -1027,15 +1644,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       children: [
         Text(
           'ID: ${schedules[index].id}',
-          style: const TextStyle(fontSize: 16),
-        ),
-        Text(
-          schedules[index].isOn ? 'Status: ON' : 'Status: OFF',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: schedules[index].isOn ? Colors.green : Colors.red,
-          ),
+          style: const TextStyle(color: Colors.white, fontFamily: 'avenir'),
         ),
       ],
     );

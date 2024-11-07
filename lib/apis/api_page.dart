@@ -148,7 +148,8 @@ class apilogout {
   }
 }
 
-Future<List<FlSpot>> fetchloghumidata(String token, int time) async {
+Future<List<Map<String, dynamic>>> fetchloghumidata(
+    String token, int time) async {
   try {
     final baseUrl = dotenv.env['API_BASE_URL']!;
     final response = await http.post(
@@ -163,26 +164,27 @@ Future<List<FlSpot>> fetchloghumidata(String token, int time) async {
     );
 
     if (response.statusCode == 200) {
-      List<dynamic> data = json.decode(response.body); // Parse JSON response
+      List<dynamic> data = json.decode(response.body);
 
-      // logger.i('Data fetched: $data'); // In dữ liệu đã nhận
-      double firstTimestamp =
-          DateTime.parse(data.first['date']).millisecondsSinceEpoch.toDouble();
-      // Map dữ liệu thành danh sách FlSpot
       return data.map((item) {
-        // double xValue =
-        //     DateTime.parse(item['date']).millisecondsSinceEpoch.toDouble();
-        double xValue =
-            (DateTime.parse(item['date']).millisecondsSinceEpoch.toDouble() -
-                    firstTimestamp) /
-                (1000 * 60 * 60 * 24);
-        // Chuyển đổi giá trị 'value', kiểm tra cả khi value là chuỗi
-        double? yValue = item['value'] is String
-            ? double.tryParse(item['value'])
-            : item['value']?.toDouble();
+        // Đảm bảo 'date' là DateTime hợp lệ
+        DateTime date = DateTime.tryParse(item['date']) ?? DateTime.now();
 
-        // Nếu không parse được thì trả về giá trị mặc định là 0.0
-        return FlSpot(xValue, yValue ?? 0.0);
+        // Kiểm tra 'value' và chuyển đổi thành double
+        double yValue = (item['value'] is String)
+            ? double.tryParse(item['value']) ??
+                0.0 // Giá trị mặc định nếu không parse được
+            : item['value']?.toDouble() ?? 0.0;
+
+        // Tính toán giá trị x từ ngày (theo đơn vị ngày)
+        double xValue = (date.millisecondsSinceEpoch -
+                DateTime.parse(data.first['date']).millisecondsSinceEpoch) /
+            (1000 * 60 * 60 * 24);
+
+        return {
+          'spot': FlSpot(xValue, yValue),
+          'date': date,
+        };
       }).toList();
     } else {
       final result = json.decode(response.body);
@@ -195,7 +197,8 @@ Future<List<FlSpot>> fetchloghumidata(String token, int time) async {
   }
 }
 
-Future<List<FlSpot>> fetchlogtempdata(String token, int time) async {
+Future<List<Map<String, dynamic>>> fetchlogtempdata(
+    String token, int time) async {
   try {
     final baseUrl = dotenv.env['API_BASE_URL']!;
 
@@ -211,20 +214,21 @@ Future<List<FlSpot>> fetchlogtempdata(String token, int time) async {
     );
 
     if (response.statusCode == 200) {
-      List<dynamic> data = json.decode(response.body); // Parse JSON response
-
-      // logger.i('Data fetched: $data');
-      // Map dữ liệu thành danh sách FlSpot
+      List<dynamic> data = json.decode(response.body);
+      logger.i(data);
       return data.map((item) {
-        double xValue = (DateTime.parse(item['date']).millisecondsSinceEpoch -
+        DateTime date = DateTime.parse(item['date']);
+        double xValue = (date.millisecondsSinceEpoch -
                 DateTime.parse(data.first['date']).millisecondsSinceEpoch) /
-            (1000 * 60 * 60 * 24); // Tính toán giá trị x dựa trên ngày
-
+            (1000 * 60 * 60 * 24);
         double yValue = item['value'] is String
             ? double.tryParse(item['value'])
             : item['value']?.toDouble();
 
-        return FlSpot(xValue, yValue);
+        return {
+          'spot': FlSpot(xValue, yValue),
+          'date': date,
+        };
       }).toList();
     } else {
       final result = json.decode(response.body);

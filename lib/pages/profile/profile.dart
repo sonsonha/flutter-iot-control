@@ -109,6 +109,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       setState(() {
         _profileData?['username'] = usernameController.text;
+        prefs.setString('username', usernameController.text);
         _profileData?['full_name'] = fullnameController.text;
         _profileData?['email'] = emailController.text;
         _profileData?['phone_number'] = phoneController.text;

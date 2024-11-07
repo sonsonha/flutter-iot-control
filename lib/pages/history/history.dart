@@ -53,12 +53,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
         setState(() {
           _historyData = data;
         });
-
-        // // ignore: use_build_context_synchronously
-        // ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        //   content: Text(
-        //       'Data fetched for: ${_startDate.toString()} to ${_endDate.toString()}'),
-        // ));
       } catch (error) {
         // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(

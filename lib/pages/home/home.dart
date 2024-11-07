@@ -24,7 +24,8 @@ class HomeScreen extends StatefulWidget {
   _HomeScreenState createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen>
+    with AutomaticKeepAliveClientMixin {
   double humidity = 0.0;
   double temperature = 0.0;
   double latitude = 0.0;
@@ -34,6 +35,8 @@ class _HomeScreenState extends State<HomeScreen> {
   List<FlSpot> humiditySpots = [];
   List<String> dates = []; // Danh sách để lưu date
   bool loading = true;
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -76,6 +79,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final isMobile = Responsive.isMobile(context);
     final isDesktop = Responsive.isDesktop(context);
     final double gaugeHeight = isMobile ? 200.0 : 150.0;
@@ -140,9 +144,27 @@ class _HomeScreenState extends State<HomeScreen> {
                                                     ),
                                                     latitude == 0.0 &&
                                                             longitude == 0.0
-                                                        ? const Center(
-                                                            child:
-                                                                CircularProgressIndicator())
+                                                        ? const Stack(
+                                                            children: [
+                                                              map(
+                                                                mapHeight:
+                                                                    350.0,
+                                                                mapWidth: 1000,
+                                                                latitude: 0.0,
+                                                                longitude: 0.0,
+                                                              ),
+                                                              Positioned(
+                                                                top: 0,
+                                                                left: 0,
+                                                                right: 0,
+                                                                bottom: 0,
+                                                                child: Center(
+                                                                  child:
+                                                                      CircularProgressIndicator(),
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          )
                                                         : map(
                                                             mapHeight: 350.0,
                                                             mapWidth: 1000,
@@ -236,8 +258,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 const SizedBox(height: 20),
                                 latitude == 0.0 && longitude == 0.0
-                                    ? const Center(
-                                        child: CircularProgressIndicator())
+                                    ? const Positioned(
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        bottom: 0,
+                                        child: Center(
+                                          child: CircularProgressIndicator(),
+                                        ),
+                                      )
                                     : map(
                                         mapHeight: 350.0,
                                         mapWidth: 1000,

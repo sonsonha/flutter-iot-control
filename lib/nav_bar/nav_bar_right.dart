@@ -33,6 +33,10 @@ class Schedule {
   }
 }
 
+const bool _isHovered = false; // To detect hover
+const bool _isTapped = false; // To detect tap (for mobile)
+int? _hoveredIndex;
+
 final currentDay = DateTime.now().weekday;
 final daysOfWeek = [
   'Monday',
@@ -114,7 +118,6 @@ class _nabarright_setState extends State<nabarright_set> {
 
           setState(() {
             todaySchedules = fetchedSchedules;
-            // filterTodaySchedules(); // Filter today's schedules after updating the list
           });
           print("Success to fetch schedules");
         } else {
@@ -223,7 +226,15 @@ class Navbar_right extends StatelessWidget {
           ),
           const Divider(),
           const ListTile(
-            title: Text('Schedule today'),
+            title: Text(
+              'Schedule today',
+              style: TextStyle(
+                color: Color.fromARGB(255, 7, 23, 80),
+                fontFamily: 'avenir',
+                fontWeight: FontWeight.bold,
+                fontSize: 22,
+              ),
+            ),
           ),
           LayoutBuilder(
             builder: (context, constraints) {
@@ -263,38 +274,111 @@ Column _buildScheduleSubtitle(int index) {
 }
 
 Card _buildScheduleCard(int index, double width) {
+  // Determine the background color and text style based on the "on" state
+  Color backgroundColor = todaySchedules[index].isOn
+      ? const Color(0xFF6448FE) // Active state (with gradient)
+      : const Color.fromARGB(255, 187, 176, 176);
+
+  // Ensure scale is never null, default to 1.0 if no hover/tap effect
+  double scale = _hoveredIndex == index || _isTapped ? 1.05 : 1.0;
+
   return Card(
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(15.0),
+    margin: const EdgeInsets.all(8.0),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(24)),
     ),
-    elevation: 5,
-    margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
-    child: SizedBox(
-      width: width, // Set card width
-      child: ListTile(
-        leading: const Icon(
-          Icons.electrical_services_rounded,
-          color: Colors.blueAccent,
-          size: 30,
-        ),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              todaySchedules[index].name,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Row(
-              children: [
-                _buildScheduleSubtitle(index),
-                Text(todaySchedules[index].time),
-              ],
+    child: Transform.scale(
+      scale: scale, // Provide a valid scale value (1.0 by default)
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: todaySchedules[index].isOn
+              ? const LinearGradient(
+                  colors: [
+                    Color.fromARGB(255, 6, 33, 83),
+                    Color.fromARGB(255, 11, 9, 160)
+                  ],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                )
+              : null, // No gradient if inactive
+          color: !todaySchedules[index].isOn
+              ? backgroundColor
+              : null, // Apply gray if inactive
+          boxShadow: [
+            BoxShadow(
+              color: [
+                const Color.fromARGB(255, 19, 76, 130),
+                const Color(0xFF5FC6FF)
+              ].last.withOpacity(0.4),
+              blurRadius: 8,
+              spreadRadius: 2,
+              offset: const Offset(4, 4),
             ),
           ],
+          borderRadius: const BorderRadius.all(Radius.circular(24)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // First Column: Icon or Checkbox
+              const Icon(
+                Icons.timer_rounded,
+                color: Colors.white,
+                size: 30,
+              ),
+              const SizedBox(
+                  width: 8), // Space between icon/checkbox and next column
+
+              // Second Column: Name, ID, Status
+              Expanded(
+                flex: 4,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      todaySchedules[index].name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: Colors.white,
+                        fontFamily: 'avenir',
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                    // const SizedBox(height: 2),
+                    // _buildScheduleSubtitle(index), // Displays ID and Status
+                  ],
+                ),
+              ),
+              const SizedBox(width: 30), // Space between columns
+
+              // Third Column: Day and Time Info (centered)
+              Expanded(
+                flex: 2,
+                child: Center(
+                  child: SizedBox(
+                    width: 200,
+                    child: _buildScheduleSubtitle(index),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8), // Space between columns
+
+              // Fourth Column: Trailing Actions
+              Expanded(
+                flex: 2,
+                child: Text(
+                  todaySchedules[index].time,
+                  style: const TextStyle(
+                      color: Colors.white, fontFamily: 'avenir'),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     ),
