@@ -92,7 +92,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       var token = prefs.getString('accessToken');
-      logger.i('testToken', error: token);
+
       await fetchEditProfile(
           token!,
           usernameController.text,

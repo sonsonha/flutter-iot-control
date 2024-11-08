@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:frontend_daktmt/custom_card.dart';
 import 'package:frontend_daktmt/nav_bar/nav_bar_left.dart';
+import 'package:frontend_daktmt/pages/setting/updateVersion.dart';
 import 'package:frontend_daktmt/pages/upgrade/upgrade.dart';
 import 'package:frontend_daktmt/responsive.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -18,6 +20,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String selectedConnection = 'MQTT';
   String selectedUpdate = 'Off';
   String selectedNoitification = 'Off';
+  String? token;
+  @override
+  void initState() {
+    super.initState();
+    _loadToken(); // Load token when the screen initializes
+  }
+
+  // Method to load token from SharedPreferences
+  Future<void> _loadToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      token = prefs.getString('accessToken');
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -251,8 +267,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       IconButton(
                         icon: const Icon(Icons.arrow_forward_ios),
-                        onPressed:
-                            _showUpdateOptions, // Gọi hàm hiển thị dialog
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) =>
+                                UpdateOptionsDialog(token: token!),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -315,85 +336,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         height: 0.2,
         thickness: 0.3,
       ),
-    );
-  }
-
-  void _showUpdateOptions() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        final isMobile = Responsive.isMobile(context);
-        final bool isRowLayout = isMobile;
-        return AlertDialog(
-          title: const Text("Software Update"),
-          content: SizedBox(
-            width: isRowLayout
-                ? MediaQuery.of(context).size.width * 0.95
-                : MediaQuery.of(context).size.width * 0.3,
-            height: MediaQuery.of(context).size.height * 0.6,
-            child: StatefulBuilder(
-              builder: (BuildContext context, StateSetter setState) {
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(5.0),
-                      decoration: BoxDecoration(
-                        color: const Color.fromARGB(255, 235, 235, 235),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Connection'),
-                          GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                selectedUpdate = (selectedUpdate == 'Off')
-                                    ? 'On'
-                                    : 'Off'; // Chuyển đổi giá trị
-                              });
-                            },
-                            child: Container(
-                              width: 70,
-                              height: 40,
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 8),
-                              alignment: Alignment.center,
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    selectedUpdate,
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const Icon(Icons.arrow_forward_ios,
-                                      size: 16), // Biểu tượng mũi tên
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    const Spacer(),
-                  ],
-                );
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Đóng dialog
-              },
-              child: const Text('Cancel'),
-            ),
-          ],
-        );
-      },
     );
   }
 }

@@ -215,7 +215,7 @@ Future<List<Map<String, dynamic>>> fetchlogtempdata(
 
     if (response.statusCode == 200) {
       List<dynamic> data = json.decode(response.body);
-      logger.i(data);
+
       return data.map((item) {
         DateTime date = DateTime.parse(item['date']);
         double xValue = (date.millisecondsSinceEpoch -
