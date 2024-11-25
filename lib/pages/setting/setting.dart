@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:frontend_daktmt/custom_card.dart';
 import 'package:frontend_daktmt/nav_bar/nav_bar_left.dart';
-import 'package:frontend_daktmt/pages/setting/updateVersion.dart';
+import 'package:frontend_daktmt/pages/setting/ble.dart';
 import 'package:frontend_daktmt/pages/upgrade/upgrade.dart';
 import 'package:frontend_daktmt/responsive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -268,10 +268,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       IconButton(
                         icon: const Icon(Icons.arrow_forward_ios),
                         onPressed: () {
-                          showDialog(
-                            context: context,
-                            builder: (context) =>
-                                UpdateOptionsDialog(token: token!),
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => const BleDevicePage()),
                           );
                         },
                       ),
