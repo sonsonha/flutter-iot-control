@@ -64,72 +64,110 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadProfile() async {
     final prefs = await SharedPreferences.getInstance();
-    var token = prefs.getString('accessToken');
 
-    try {
-      Map<String, dynamic> data = await fetchProfileData(token!);
+    // Retrieve the profile JSON string
+    String? profileJson = prefs.getString('profile');
+    if (profileJson != null) {
+      // Decode the JSON string into a Map
+      Map<String, dynamic> profileData = json.decode(profileJson);
+
       setState(() {
-        _profileData = data;
-        usernameController.text = data['username'] ?? '';
-        fullnameController.text = data['full_name'] ?? '';
-        emailController.text = data['email'] ?? '';
-        phoneController.text = data['phone_number'] ?? '';
-        aioController.text = data['AIO_USERNAME'] ?? '';
-        aiokeyController.text = data['AIO_KEY'] ?? '';
-        wsvController.text = data['webServerIp'] ?? '';
-        newpasswordController.text = data['newpassword'] ?? '';
-        currentpasswordController.text = data['current_password'] ?? '';
+        _profileData = profileData; // Save the decoded profile data
+
+        // Populate the text controllers with the data
+        usernameController.text = profileData['username'] ?? '';
+        fullnameController.text = profileData['fullname'] ?? '';
+        emailController.text = profileData['email'] ?? '';
+        phoneController.text = profileData['phone_number'] ?? '';
+        aioController.text = profileData['AIO_USERNAME'] ?? '';
+        aiokeyController.text = profileData['AIO_KEY'] ?? '';
+        wsvController.text = profileData['webServerIp'] ?? '';
+        newpasswordController.text = profileData['newPassword'] ?? '';
+        currentpasswordController.text = profileData['currentPassword'] ?? '';
       });
-    } catch (error) {
-      // ignore: use_build_context_synchronously
+    } else {
+      logger.i("No profile data found in SharedPreferences.");
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error fetching profile: $error')),
+        const SnackBar(content: Text('No profile data found.')),
       );
     }
   }
 
-  Future<void> _updateProfile() async {
+  Future<void> _updateProfile({
+    required String currentPassword, // Mật khẩu hiện tại
+  }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       var token = prefs.getString('accessToken');
 
-      await fetchEditProfile(
-          token!,
-          usernameController.text,
-          fullnameController.text,
-          emailController.text,
-          phoneController.text,
-          aioController.text,
-          aiokeyController.text,
-          wsvController.text,
-          newpasswordController.text,
-          currentpasswordController.text,
-          avatarImageFile,
-          coverPhotoFile);
+      if (currentPassword.isEmpty) {
+        throw Exception('Current password is required.');
+      }
 
+      // Tạo payload chỉ chứa các trường thay đổi
+      Map<String, dynamic> updatedData = {};
+
+      // So sánh các giá trị từ TextEditingController với _profileData
+      if (usernameController.text.trim() != _profileData?['username']) {
+        updatedData['username'] = usernameController.text.trim();
+      }
+      if (emailController.text.trim() != _profileData?['email']) {
+        updatedData['email'] = emailController.text.trim();
+      }
+      if (phoneController.text.trim() != _profileData?['phone_number']) {
+        updatedData['phone_number'] = phoneController.text.trim();
+      }
+      if (aioController.text.trim() != _profileData?['AIO_USERNAME']) {
+        updatedData['AIO_USERNAME'] = aioController.text.trim();
+      }
+      if (aiokeyController.text.trim() != _profileData?['AIO_KEY']) {
+        updatedData['AIO_KEY'] = aiokeyController.text.trim();
+      }
+      if (wsvController.text.trim() != _profileData?['webServerIp']) {
+        updatedData['webServerIp'] = wsvController.text.trim();
+      }
+      if (isEditing &&
+          newpasswordController.text.trim().isNotEmpty &&
+          newpasswordController.text.trim() != '**** ****') {
+        updatedData['newpassword'] = newpasswordController.text.trim();
+      }
+
+      // Luôn thêm currentpassword vào payload
+      updatedData['currentpassword'] = currentPassword.trim();
+
+      // Nếu không có thay đổi nào (ngoài currentpassword)
+      if (updatedData.keys.length == 1 &&
+          updatedData.containsKey('currentpassword')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No changes were made.')),
+        );
+        return;
+      }
+
+      // Gửi request cập nhật đến backend
+      await fetchEditProfile(
+          token!, updatedData, avatarImageFile, coverPhotoFile);
+
+      // Cập nhật UI và SharedPreferences sau khi backend phản hồi thành công
       setState(() {
-        _profileData?['username'] = usernameController.text;
-        prefs.setString('username', usernameController.text);
-        _profileData?['full_name'] = fullnameController.text;
-        _profileData?['email'] = emailController.text;
-        _profileData?['phone_number'] = phoneController.text;
-        _profileData?['AIO_USERNAME'] = aioController.text;
-        _profileData?['AIO_KEY'] = aiokeyController.text;
-        _profileData?['webServerIp'] = wsvController.text;
-        _profileData?['newpassword'] = newpasswordController.text;
-        _profileData?['current_password'] = currentpasswordController.text;
-        isEditing = false;
+        updatedData.forEach((key, value) {
+          if (key != 'currentpassword') {
+            _profileData?[key] = value;
+            prefs.setString(key, value.toString());
+          }
+        });
       });
-      logger.i("test");
-      // ignore: use_build_context_synchronously
+
+      // Hiển thị thông báo thành công
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile updated successfully!')),
       );
     } catch (e) {
-      // ignore: use_build_context_synchronously
+      // Xử lý lỗi và hiển thị thông báo lỗi
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to update profile: $e')),
       );
+      print('Error: $e');
     }
   }
 
@@ -348,12 +386,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: const Text('Save'),
               onPressed: () {
                 if (currentpasswordController.text.trim().isNotEmpty) {
-                  _updateProfile();
+                  _updateProfile(
+                    currentPassword: currentpasswordController.text
+                        .trim(), // Truyền mật khẩu hiện tại
+                  );
                   Navigator.of(context).pop();
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                        content: Text('Please enter your current password.')),
+                      content: Text('Please enter your current password.'),
+                    ),
                   );
                 }
               },

@@ -1,11 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:frontend_daktmt/apis/api_page.dart';
-import 'package:frontend_daktmt/apis/apis_login.dart';
 import 'package:frontend_daktmt/responsive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
 
 class Schedule {
   String id;
@@ -33,21 +29,11 @@ class Schedule {
   }
 }
 
-const bool _isHovered = false; // To detect hover
+Map<String, dynamic>? profileData;
+// const bool _isHovered = false; // To detect hover
 const bool _isTapped = false; // To detect tap (for mobile)
 int? _hoveredIndex;
 
-final currentDay = DateTime.now().weekday;
-final daysOfWeek = [
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-  'Sunday'
-];
-final today = daysOfWeek[currentDay - 1];
 // List<Schedule> schedules = [];
 List<Schedule> todaySchedules = [];
 
@@ -59,75 +45,52 @@ class nabarright_set extends StatefulWidget {
 }
 
 class _nabarright_setState extends State<nabarright_set> {
-  Map<String, dynamic>? profileData;
-
   @override
   void initState() {
     super.initState();
-    _getToken();
     _loadProfile();
-    // filterTodaySchedules();
-    fetchSchedulesAPI(today);
-  }
-
-  String? token;
-
-  void _getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    token = prefs.getString('accessToken');
+    fetchSchedulesAPI();
   }
 
   Future<void> _loadProfile() async {
-    try {
-      final data = await fetchProfileData(token!);
+    final prefs = await SharedPreferences.getInstance();
+    final storedProfileData = prefs.getString('profileData');
+
+    if (storedProfileData != null) {
+      final Map<String, dynamic> profileMap = json.decode(storedProfileData);
       setState(() {
-        profileData = data;
+        profileData = {
+          'username': profileMap['username'],
+          'email': profileMap['email'],
+        };
       });
-    } catch (error) {
-      logger.e("Error fetching profile: $error");
+      print("Loaded profileData from SharedPreferences: $profileData");
+    } else {
+      setState(() {
+        profileData = {
+          'username': 'Guest',
+          'email': 'No email available',
+        };
+      });
+      print("No profileData found in SharedPreferences.");
     }
   }
 
-  Future<void> fetchSchedulesAPI(String day) async {
-    final prefs = await SharedPreferences.getInstance();
-    var token = prefs.getString('accessToken')!;
-    final baseUrl = dotenv.env['API_BASE_URL']!;
-    final url = Uri.parse('http://$baseUrl/schedule/get-home');
-
-    Map<String, dynamic> requestBody = {
-      "day": day,
-    };
-
-    try {
-      var response = await http.patch(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token'
-        },
-        body: jsonEncode(requestBody),
-      );
-
-      if (response.statusCode == 200) {
-        final responseData = json.decode(response.body);
-
-        if (responseData is List) {
-          List<Schedule> fetchedSchedules = responseData
-              .map<Schedule>((scheduleJson) => Schedule.fromJson(scheduleJson))
-              .toList();
-
-          setState(() {
-            todaySchedules = fetchedSchedules;
-          });
-          print("Success to fetch schedules");
-        } else {
-          print("Unexpected response format: ${response.body}");
-        }
-      } else {
-        print("Failed to fetch schedules: ${response.body}");
+  Future<void> fetchSchedulesAPI() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final responseData = prefs.getString('schedules_home');
+    if (responseData != null) {
+      try {
+        final List<dynamic> jsonSchedules = json.decode(responseData);
+        List<Schedule> fetchedSchedules = jsonSchedules
+            .map<Schedule>((scheduleJson) => Schedule.fromJson(scheduleJson))
+            .toList();
+        setState(() {
+          todaySchedules = fetchedSchedules;
+        });
+      } catch (e) {
+        print("Error parsing local schedules: $e");
       }
-    } catch (e) {
-      print("Error occurred: $e");
     }
   }
 
@@ -159,27 +122,20 @@ class _nabarright_setState extends State<nabarright_set> {
             child: Row(
               children: [
                 ClipOval(
-                  child: profileData != null &&
-                          profileData!['avatar'] != null &&
-                          profileData!['avatar']['data'] != null
-                      ? Image.memory(
-                          base64Decode(profileData!['avatar']['data']),
-                          width: 35,
-                          height: 35,
-                          fit: BoxFit.cover,
-                        )
-                      : Image.asset(
+                  child: profileData != null
+                      ? Image.asset(
                           'assets/hcmut.png',
                           width: 35,
                           height: 35,
                           fit: BoxFit.cover,
-                        ),
+                        )
+                      : const Icon(Icons.account_circle, size: 35),
                 ),
                 SizedBox(width: isRowLayout ? 8 : 0),
                 isRowLayout
-                    ? const Text(
-                        "NguyenTrung",
-                        style: TextStyle(
+                    ? Text(
+                        profileData?['username'] ?? 'Guest',
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
@@ -196,9 +152,14 @@ class _nabarright_setState extends State<nabarright_set> {
 }
 
 class Navbar_right extends StatelessWidget {
-  final Map<String, dynamic> profileData;
+  const Navbar_right({super.key});
 
-  const Navbar_right({super.key, required this.profileData});
+  // final Map<String, dynamic>? profileData;
+
+  // const Navbar_right({
+  //   super.key,
+  //   required this.profileData,
+  // });
 
   @override
   Widget build(BuildContext context) {
@@ -207,18 +168,32 @@ class Navbar_right extends StatelessWidget {
         padding: EdgeInsets.zero,
         children: [
           UserAccountsDrawerHeader(
-            accountName: const Text('NguyenTrung'),
-            accountEmail: const Text('trungvodich@gmail.com'),
-            currentAccountPicture: CircleAvatar(
-              child: ClipOval(
-                child: profileData['avatar'] != null &&
-                        profileData['avatar']['data'] != null
-                    ? Image.memory(
-                        base64Decode(profileData['avatar']['data']),
-                        fit: BoxFit.cover,
-                      )
-                    : Image.asset('assets/hcmut.png'),
+            accountName: Text(
+              profileData?['username'] ?? 'Unknown User', // Display username
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
               ),
+            ),
+            accountEmail: Text(
+              profileData?['email'] ?? 'Email not available', // Display email
+              style: const TextStyle(fontSize: 14),
+            ),
+            currentAccountPicture: CircleAvatar(
+              backgroundColor: Colors.white,
+              child: profileData != null
+                  ? const ClipOval(
+                      child: Icon(
+                        Icons.account_circle,
+                        size: 50,
+                        color: Colors.grey,
+                      ),
+                    )
+                  : const Icon(
+                      Icons.account_circle,
+                      size: 80,
+                      color: Colors.grey,
+                    ),
             ),
             decoration: const BoxDecoration(
               color: Color.fromARGB(255, 165, 165, 165),
@@ -238,8 +213,7 @@ class Navbar_right extends StatelessWidget {
           ),
           LayoutBuilder(
             builder: (context, constraints) {
-              final cardWidth = constraints.maxWidth *
-                  0.9; // Adjusts card size to 90% of the drawer width
+              final cardWidth = constraints.maxWidth * 0.9;
 
               return ListView.builder(
                 shrinkWrap: true,

@@ -29,7 +29,17 @@ Future<bool> fetchSignIn(TextEditingController emailController,
       await prefs.setBool('isLoggedIn', true);
       await prefs.setString('accessToken', jsonData['accessToken']);
       await prefs.setString('refreshToken', jsonData['refreshToken']);
-      // ignore: use_build_context_synchronously
+      await prefs.setDouble('temperature', jsonData['temperature']);
+      await prefs.setDouble('humidity', jsonData['humidity']);
+      await prefs.setString('location', jsonData['location']);
+      await prefs.setString('relays', json.encode(jsonData['relays']));
+      await prefs.setString(
+          'relays_home', json.encode(jsonData['relays_home']));
+      await prefs.setString('schedules', json.encode(jsonData['schedules']));
+      await prefs.setString(
+          'schedules_home', json.encode(jsonData['schedules_home']));
+      await prefs.setString('profile', json.encode(jsonData['profile']));
+
       Navigator.pushReplacementNamed(context, '/home');
       return true;
     } else {
@@ -150,7 +160,7 @@ Future<bool> fetchSendcode(String email) async {
       body: json.encode({
         'email': convertEmail,
       }),
-    );  
+    );
     if (response.statusCode == 200) {
       logger.i("Success");
       // print('Response body: ${response.body}');

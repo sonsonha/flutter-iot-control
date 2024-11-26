@@ -24,19 +24,16 @@ class HomeScreen extends StatefulWidget {
   _HomeScreenState createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen>
-    with AutomaticKeepAliveClientMixin {
+class _HomeScreenState extends State<HomeScreen> {
   double humidity = 0.0;
   double temperature = 0.0;
-  double latitude = 0.0;
-  double longitude = 0.0;
+  double latitude = 10.7736288;
+  double longitude = 106.6602627;
   String token = "";
 
   List<FlSpot> humiditySpots = [];
   List<String> dates = []; // Danh sách để lưu date
   bool loading = true;
-  @override
-  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -44,32 +41,31 @@ class _HomeScreenState extends State<HomeScreen>
     fetchSensorData();
   }
 
-// Function to fetch sensor dat
   Future<void> fetchSensorData() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      SharedPreferences prefs = await SharedPreferences.getInstance();
       token = prefs.getString('accessToken')!;
 
-      double humidityData = 0.00;
-      double temperatureData = 0.00;
-      double fetchedLatitude = latitude;
-      double fetchedLongitude = longitude;
+      double humidityData = prefs.getDouble('humidity') ?? 0.0;
+      double temperatureData = prefs.getDouble('temperature') ?? 0.0;
+      // ignore: unused_local_variable
+      String locationData =
+          prefs.getString('location') ?? "10.7736288-106.6602627";
+
+      double fetchedLatitude = 10.7736288;
+      double fetchedLongitude = 106.6602627;
+
       if (token.isEmpty) {
         logger.e('Non Access Token.');
       } else {
-        humidityData = await fetchHumidityData(token);
-        temperatureData = await fetchTemperatureData(token);
+        // ignore: unused_local_variable
         LatLng locationA = await fetchLocationData(token);
-
-        fetchedLatitude = locationA.latitude;
-        fetchedLongitude = locationA.longitude;
       }
 
-      // Cập nhật trạng thái
       setState(() {
-        humidity = humidityData; // Sử dụng '0' nếu không có giá trị
+        humidity = humidityData;
         temperature = temperatureData;
-        latitude = fetchedLatitude; // Update latitude with fetched value
+        latitude = fetchedLatitude;
         longitude = fetchedLongitude;
       });
     } catch (error) {
@@ -79,7 +75,6 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);
     final isMobile = Responsive.isMobile(context);
     final isDesktop = Responsive.isDesktop(context);
     final double gaugeHeight = isMobile ? 200.0 : 150.0;
@@ -89,8 +84,8 @@ class _HomeScreenState extends State<HomeScreen>
     return Scaffold(
       drawer: const Navbar_left(),
       endDrawer: const Navbar_right(
-        profileData: {},
-      ),
+          // profileData: {},
+          ),
       body: SingleChildScrollView(
         child: Stack(
           children: [
@@ -144,27 +139,9 @@ class _HomeScreenState extends State<HomeScreen>
                                                     ),
                                                     latitude == 0.0 &&
                                                             longitude == 0.0
-                                                        ? const Stack(
-                                                            children: [
-                                                              map(
-                                                                mapHeight:
-                                                                    350.0,
-                                                                mapWidth: 1000,
-                                                                latitude: 0.0,
-                                                                longitude: 0.0,
-                                                              ),
-                                                              Positioned(
-                                                                top: 0,
-                                                                left: 0,
-                                                                right: 0,
-                                                                bottom: 0,
-                                                                child: Center(
-                                                                  child:
-                                                                      CircularProgressIndicator(),
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          )
+                                                        ? const Center(
+                                                            child:
+                                                                CircularProgressIndicator())
                                                         : map(
                                                             mapHeight: 350.0,
                                                             mapWidth: 1000,
@@ -258,15 +235,8 @@ class _HomeScreenState extends State<HomeScreen>
                                 ),
                                 const SizedBox(height: 20),
                                 latitude == 0.0 && longitude == 0.0
-                                    ? const Positioned(
-                                        top: 0,
-                                        left: 0,
-                                        right: 0,
-                                        bottom: 0,
-                                        child: Center(
-                                          child: CircularProgressIndicator(),
-                                        ),
-                                      )
+                                    ? const Center(
+                                        child: CircularProgressIndicator())
                                     : map(
                                         mapHeight: 350.0,
                                         mapWidth: 1000,
