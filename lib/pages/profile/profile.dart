@@ -390,6 +390,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     currentPassword: currentpasswordController.text
                         .trim(), // Truyền mật khẩu hiện tại
                   );
+                  setState(() {
+                    isEditing = false;
+                  });
                   Navigator.of(context).pop();
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
