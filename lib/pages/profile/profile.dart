@@ -70,11 +70,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (profileJson != null) {
       // Decode the JSON string into a Map
       Map<String, dynamic> profileData = json.decode(profileJson);
-
+      logger.i(profileData);
       setState(() {
         _profileData = profileData; // Save the decoded profile data
-
-        // Populate the text controllers with the data
         usernameController.text = profileData['username'] ?? '';
         fullnameController.text = profileData['fullname'] ?? '';
         emailController.text = profileData['email'] ?? '';
@@ -110,33 +108,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
       // So sánh các giá trị từ TextEditingController với _profileData
       if (usernameController.text.trim() != _profileData?['username']) {
         updatedData['username'] = usernameController.text.trim();
+        prefs.remove('username');
       }
       if (emailController.text.trim() != _profileData?['email']) {
         updatedData['email'] = emailController.text.trim();
+        prefs.remove('email');
       }
       if (phoneController.text.trim() != _profileData?['phone_number']) {
         updatedData['phone_number'] = phoneController.text.trim();
+        prefs.remove('phone_number');
       }
       if (aioController.text.trim() != _profileData?['AIO_USERNAME']) {
         updatedData['AIO_USERNAME'] = aioController.text.trim();
+        prefs.remove('AIO_USERNAME');
       }
       if (aiokeyController.text.trim() != _profileData?['AIO_KEY']) {
         updatedData['AIO_KEY'] = aiokeyController.text.trim();
+        prefs.remove('AIO_KEY');
       }
       if (wsvController.text.trim() != _profileData?['webServerIp']) {
         updatedData['webServerIp'] = wsvController.text.trim();
+        prefs.remove('webServerIp');
       }
       if (isEditing &&
           newpasswordController.text.trim().isNotEmpty &&
           newpasswordController.text.trim() != '**** ****') {
         updatedData['newpassword'] = newpasswordController.text.trim();
+        prefs.remove('newpassword');
       }
 
       // Luôn thêm currentpassword vào payload
       updatedData['currentpassword'] = currentPassword.trim();
 
       // Nếu không có thay đổi nào (ngoài currentpassword)
-      if (updatedData.keys.length == 1 &&
+      if (updatedData.length == 1 &&
           updatedData.containsKey('currentpassword')) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('No changes were made.')),
@@ -148,16 +153,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       await fetchEditProfile(
           token!, updatedData, avatarImageFile, coverPhotoFile);
 
-      // Cập nhật UI và SharedPreferences sau khi backend phản hồi thành công
       setState(() {
         updatedData.forEach((key, value) {
           if (key != 'currentpassword') {
             _profileData?[key] = value;
-            prefs.setString(key, value.toString());
+            logger.i(value);
           }
         });
+        prefs.setString('profile', json.encode(_profileData));
       });
-
       // Hiển thị thông báo thành công
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile updated successfully!')),

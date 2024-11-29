@@ -101,15 +101,11 @@ class OnOffSwitch extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [
-            Color.fromARGB(255, 214, 220, 231),
-            Color.fromARGB(255, 165, 164, 234),
+            Color.fromARGB(255, 253, 253, 253),
+            Color.fromARGB(255, 255, 255, 255),
           ],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
-        ),
-        border: Border.all(
-          color: const Color.fromARGB(255, 49, 60, 178).withOpacity(0.5),
-          width: 2.0,
         ),
         borderRadius: BorderRadius.circular(10.0),
       ),
