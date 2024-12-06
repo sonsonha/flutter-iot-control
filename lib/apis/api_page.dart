@@ -263,7 +263,7 @@ Future<List<Map<String, dynamic>>> fetchhistorydata(
       if (item.containsKey('Date')) {
         try {
           // Assuming the format in response is "HH/mm/ss dd/MM/yyyy"
-          final date = DateFormat('HH:mm:ss dd/MM/yyyy').parse(item['Date']);
+          final date = DateFormat('HH/mm/ss dd/MM/yyyy').parse(item['Date']);
           item['Date'] =
               date.toIso8601String(); // Convert to ISO or preferred format
         } catch (e) {

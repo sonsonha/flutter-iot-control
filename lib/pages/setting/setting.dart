@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:frontend_daktmt/custom_card.dart';
 import 'package:frontend_daktmt/nav_bar/nav_bar_left.dart';
-import 'package:frontend_daktmt/pages/setting/ble.dart';
+// import 'package:frontend_daktmt/pages/setting/ble.dart';
 import 'package:frontend_daktmt/pages/upgrade/upgrade.dart';
 import 'package:frontend_daktmt/responsive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -248,10 +248,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                   divider_set(),
-                  Row(
+                  const Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Row(
+                      Row(
                         // Thay đổi đây để thêm icon vào trước text
                         children: [
                           Icon(
@@ -265,16 +265,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           Text('Software Update'),
                         ],
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.arrow_forward_ios),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => const BleDevicePage()),
-                          );
-                        },
-                      ),
+                      // IconButton(
+                      //   icon: const Icon(Icons.arrow_forward_ios),
+                      //   onPressed: () {
+                      //     Navigator.push(
+                      //       context,
+                      //       MaterialPageRoute(
+                      //           builder: (context) => const BleDevicePage()),
+                      //     );
+                      //   },
+                      // ),
                     ],
                   ),
                   divider_set(),

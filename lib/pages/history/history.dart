@@ -192,9 +192,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               children: [
                                 Text(
                                   historyItem['Date'] != null
-                                      ? DateTime.parse(historyItem['Date'])
-                                          .toLocal()
-                                          .toString() // Parse and format the date
+                                      ?DateFormat('dd/MM/yyyy HH:mm:ss ')
+                                          .format(DateTime.parse(
+                                                  historyItem['Date'])
+                                              .toLocal()) // Parse and format the date
                                       : 'No date',
                                 ),
                                 Text(historyItem['activity'] ?? 'No activity'),
@@ -206,7 +207,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 Text(historyItem['activity'] ?? 'No activity'),
                                 Text(
                                   historyItem['Date'] != null
-                                      ? DateFormat('HH:mm:ss dd/MM/yyyy')
+                                      ? DateFormat('dd/MM/yyyy HH:mm:ss ')
                                           .format(DateTime.parse(
                                                   historyItem['Date'])
                                               .toLocal())

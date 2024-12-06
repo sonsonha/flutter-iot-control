@@ -124,7 +124,7 @@ class _RegisterState extends State<Register> {
           Container(
             decoration: backgound_Color(),
             padding: EdgeInsets.only(
-                top: isRowLayout ? 50.0 : 20.0, left: isRowLayout ? 55 : 222),
+                top: isRowLayout ? 50.0 : 10.0, left: isRowLayout ? 55 : 222),
             alignment: Alignment.topLeft,
             child: const Text(
               'Register!',
@@ -139,7 +139,7 @@ class _RegisterState extends State<Register> {
             padding: isRowLayout
                 ? const EdgeInsets.fromLTRB(10, 200, 10, 10)
                 : EdgeInsets.fromLTRB(
-                    screenWidth * 0.34, 200, screenWidth * 0.34, 100),
+                    screenWidth * 0.34, 100, screenWidth * 0.34, 100),
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(22),
@@ -215,7 +215,7 @@ class _RegisterState extends State<Register> {
                       children: [
                         Expanded(
                           child: TextField(
-                            keyboardType: TextInputType.number,
+                            keyboardType: TextInputType.text,
                             controller: _code,
                             decoration: const InputDecoration(
                               label: Text(
@@ -457,7 +457,7 @@ class _RegisterState extends State<Register> {
         suffixIcon: IconButton(
           icon: Icon(
             _passwordVisible ? Icons.visibility : Icons.visibility_off,
-            color: const Color.fromARGB(255, 30, 255, 0),
+            color:  _passwordVisible ? const Color.fromARGB(255, 30, 255, 0) :  const Color.fromARGB(255, 84, 84, 84),
           ),
           onPressed: () {
             setState(() {
