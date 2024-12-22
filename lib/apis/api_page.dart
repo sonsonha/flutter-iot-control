@@ -29,7 +29,7 @@ Future<double> fetchHumidityData(String token) async {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setDouble('humidity', humidity); // Lưu độ ẩm dưới dạng double
 
-      return humidity; // Trả về giá trị độ ẩm dạng double
+      return humidity;
     } else {
       final result = json.decode(response.body);
       logger.e('Error: ${result['error']}');
@@ -90,7 +90,9 @@ Future<LatLng> fetchLocationData(String token) async {
           double.parse(result['X']); // Chuyển đổi chuỗi 'X' thành double
       final double longitude =
           double.parse(result['Y']); // Chuyển đổi chuỗi 'Y' thành double
-
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble('X', latitude);
+      await prefs.setDouble('Y', latitude);
       return LatLng(latitude, longitude);
     } else {
       final result = json.decode(response.body);
@@ -135,6 +137,7 @@ class apilogout {
         // Nếu đăng xuất thành công, xóa token
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove('accessToken'); // Xóa token
+        await prefs.clear();
         return true; // Trả về true nếu đăng xuất thành công
       } else {
         final result = json.decode(response.body);
@@ -156,10 +159,10 @@ Future<List<Map<String, dynamic>>> fetchloghumidata(
       Uri.parse('http://$baseUrl/log/humi'),
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token', // Sử dụng token
+        'Authorization': 'Bearer $token',
       },
       body: json.encode({
-        'time': time, // Định nghĩa thời gian cần lấy dữ liệu
+        'time': time,
       }),
     );
 
@@ -168,15 +171,12 @@ Future<List<Map<String, dynamic>>> fetchloghumidata(
 
       return data.map((item) {
         // Đảm bảo 'date' là DateTime hợp lệ
-        DateTime date = DateTime.tryParse(item['date']) ?? DateTime.now();
-
-        // Kiểm tra 'value' và chuyển đổi thành double
-        double yValue = (item['value'] is String)
-            ? double.tryParse(item['value']) ??
-                0.0 // Giá trị mặc định nếu không parse được
-            : item['value']?.toDouble() ?? 0.0;
-
-        // Tính toán giá trị x từ ngày (theo đơn vị ngày)
+        DateTime date = DateTime.parse(item['date']);
+        double yValue = (item['value'] == null || item['value'] == '')
+            ? 0.0
+            : (item['value'] is String
+                ? double.tryParse(item['value']) ?? 0.0
+                : item['value']?.toDouble() ?? 0.0);
         double xValue = (date.millisecondsSinceEpoch -
                 DateTime.parse(data.first['date']).millisecondsSinceEpoch) /
             (1000 * 60 * 60 * 24);
@@ -209,7 +209,7 @@ Future<List<Map<String, dynamic>>> fetchlogtempdata(
         'Authorization': 'Bearer $token', // Sử dụng token
       },
       body: json.encode({
-        'time': time, // Định nghĩa thời gian cần lấy dữ liệu
+        'time': time,
       }),
     );
 
@@ -217,13 +217,18 @@ Future<List<Map<String, dynamic>>> fetchlogtempdata(
       List<dynamic> data = json.decode(response.body);
 
       return data.map((item) {
+        // Đảm bảo 'date' là DateTime hợp lệ
+
         DateTime date = DateTime.parse(item['date']);
+
+        double yValue = (item['value'] == null || item['value'] == '')
+            ? 0.0
+            : (item['value'] is String
+                ? double.tryParse(item['value']) ?? 0.0
+                : item['value']?.toDouble() ?? 0.0);
         double xValue = (date.millisecondsSinceEpoch -
                 DateTime.parse(data.first['date']).millisecondsSinceEpoch) /
             (1000 * 60 * 60 * 24);
-        double yValue = item['value'] is String
-            ? double.tryParse(item['value'])
-            : item['value']?.toDouble();
 
         return {
           'spot': FlSpot(xValue, yValue),
@@ -312,16 +317,13 @@ Future<void> fetchEditProfile(
   final request = http.MultipartRequest('PATCH', uri)
     ..headers['Authorization'] = 'Bearer $token';
 
-  
   updatedData.forEach((key, value) {
     request.fields[key] = value.toString();
   });
 
- 
   final streamedResponse = await request.send();
   final response = await http.Response.fromStream(streamedResponse);
 
-  
   if (response.statusCode != 200) {
     throw Exception('Failed to update profile');
   }

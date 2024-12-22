@@ -248,10 +248,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                   divider_set(),
-                  const Row(
+                  Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
+                      const Row(
                         // Thay đổi đây để thêm icon vào trước text
                         children: [
                           Icon(
@@ -265,16 +265,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           Text('Software Update'),
                         ],
                       ),
-                      // IconButton(
-                      //   icon: const Icon(Icons.arrow_forward_ios),
-                      //   onPressed: () {
-                      //     Navigator.push(
-                      //       context,
-                      //       MaterialPageRoute(
-                      //           builder: (context) => const BleDevicePage()),
-                      //     );
-                      //   },
-                      // ),
+                      IconButton(
+                        icon: const Icon(Icons.arrow_forward_ios),
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('You are on the latest version'),
+                            ),
+                          );
+                          // Navigator.push(
+                          //   context,
+                          //   MaterialPageRoute(
+                          //       builder: (context) => const BleDevicePage()),
+                          // );
+                        },
+                      ),
                     ],
                   ),
                   divider_set(),

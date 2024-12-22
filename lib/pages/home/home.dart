@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:frontend_daktmt/apis/api_refreshtoken.dart';
 import 'package:frontend_daktmt/custom_card.dart';
 import 'package:frontend_daktmt/pages/home/widget/chart.dart';
 import 'package:frontend_daktmt/pages/home/widget/map.dart';
@@ -7,10 +8,10 @@ import 'package:frontend_daktmt/pages/home/widget/toggle.dart';
 import 'package:frontend_daktmt/responsive.dart';
 import 'package:frontend_daktmt/nav_bar/nav_bar_left.dart';
 import 'package:frontend_daktmt/nav_bar/nav_bar_right.dart';
-import 'package:latlong2/latlong.dart';
+// import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'widget/gauge.dart';
-import 'package:frontend_daktmt/apis/api_page.dart';
+// import 'package:frontend_daktmt/apis/api_page.dart';
 import 'package:frontend_daktmt/pages/noitification/noitification.dart';
 import 'package:logger/logger.dart';
 
@@ -27,47 +28,51 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   double humidity = 0.0;
   double temperature = 0.0;
-  double latitude = 10.7736288;
-  double longitude = 106.6602627;
+  double latitude = 0.0;
+  double longitude = 0.0;
   String token = "";
 
   List<FlSpot> humiditySpots = [];
-  List<String> dates = []; // Danh sách để lưu date
+  List<String> dates = [];
   bool loading = true;
 
   @override
   void initState() {
     super.initState();
     fetchSensorData();
+    startRefreshTokenTimer(fetchSensorData);
   }
 
   Future<void> fetchSensorData() async {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
-      token = prefs.getString('accessToken')!;
 
+      token = prefs.getString('accessToken')!;
       double humidityData = prefs.getDouble('humidity') ?? 0.0;
       double temperatureData = prefs.getDouble('temperature') ?? 0.0;
-      // ignore: unused_local_variable
-      String locationData =
-          prefs.getString('location') ?? "10.7736288-106.6602627";
 
-      double fetchedLatitude = 10.7736288;
-      double fetchedLongitude = 106.6602627;
+      String? savedLocation = prefs.getString('location');
 
-      if (token.isEmpty) {
-        logger.e('Non Access Token.');
-      } else {
-        // ignore: unused_local_variable
-        LatLng locationA = await fetchLocationData(token);
+      if (savedLocation == null || savedLocation.isEmpty) {
+        logger
+            .w("No location found in SharedPreferences. Using default value.");
+        savedLocation = "10.8797474-106.8064651";
       }
 
-      setState(() {
-        humidity = humidityData;
-        temperature = temperatureData;
-        latitude = fetchedLatitude;
-        longitude = fetchedLongitude;
-      });
+      List<String> coordinates = savedLocation.split('-');
+      if (coordinates.length == 2) {
+        double fetchedLatitude = double.tryParse(coordinates[0]) ?? 0.0;
+        double fetchedLongitude = double.tryParse(coordinates[1]) ?? 0.0;
+
+        setState(() {
+          humidity = humidityData;
+          temperature = temperatureData;
+          latitude = fetchedLatitude;
+          longitude = fetchedLongitude;
+        });
+      } else {
+        logger.e("Invalid location format: $savedLocation");
+      }
     } catch (error) {
       logger.e("Error fetching sensor data: $error");
     }

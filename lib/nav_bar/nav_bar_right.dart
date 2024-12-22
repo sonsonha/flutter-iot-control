@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:frontend_daktmt/responsive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../pages/home/home.dart';
+
 class Schedule {
   String id;
   String name;
@@ -54,7 +56,7 @@ class _nabarright_setState extends State<nabarright_set> {
 
   Future<void> _loadProfile() async {
     final prefs = await SharedPreferences.getInstance();
-    final storedProfileData = prefs.getString('profileData');
+    final storedProfileData = prefs.getString('profile');
 
     if (storedProfileData != null) {
       final Map<String, dynamic> profileMap = json.decode(storedProfileData);
@@ -64,7 +66,6 @@ class _nabarright_setState extends State<nabarright_set> {
           'email': profileMap['email'],
         };
       });
-      print("Loaded profileData from SharedPreferences: $profileData");
     } else {
       setState(() {
         profileData = {
@@ -72,7 +73,7 @@ class _nabarright_setState extends State<nabarright_set> {
           'email': 'No email available',
         };
       });
-      print("No profileData found in SharedPreferences.");
+      logger.w("No profileData found in SharedPreferences.");
     }
   }
 

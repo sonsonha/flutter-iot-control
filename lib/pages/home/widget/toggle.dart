@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../home.dart';
+
 class Relay {
   final int id;
   final String name;
@@ -46,23 +48,29 @@ class _ToggleState extends State<toggle> {
   Future<void> fetchHomeRelays() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     final responseData = prefs.getString('relays_home');
-    if (responseData != null) {
-      final decodedData = json.decode(responseData);
 
-      if (decodedData is List) {
-        setState(() {
-          homeRelays = decodedData
-              .map<Relay>((relayJson) => Relay.fromJson(relayJson))
-              .toList();
-        });
+    if (responseData != null) {
+      try {
+        final decodedData = json.decode(responseData);
+        if (decodedData is List) {
+          setState(() {
+            homeRelays = decodedData
+                .map<Relay>((relayJson) => Relay.fromJson(relayJson))
+                .toList();
+          });
+        }
+      } catch (e) {
+        logger.e("Error parsing relays_home data: $e");
       }
+    } else {
+      logger.i("No relays_home data found.");
     }
   }
 
   @override
   Widget build(BuildContext context) {
     if (homeRelays.isEmpty) {
-      return const Center(child: Text("No relays available"));
+      return const Center(child: Text(""));
     }
 
     return Center(

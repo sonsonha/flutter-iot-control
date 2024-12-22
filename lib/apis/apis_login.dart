@@ -29,8 +29,23 @@ Future<bool> fetchSignIn(TextEditingController emailController,
       await prefs.setBool('isLoggedIn', true);
       await prefs.setString('accessToken', jsonData['accessToken']);
       await prefs.setString('refreshToken', jsonData['refreshToken']);
-      await prefs.setDouble('temperature', jsonData['temperature']);
-      await prefs.setDouble('humidity', jsonData['humidity']);
+      // Kiểm tra và xử lý giá trị của temperature
+      if (jsonData['temperature'] is double) {
+        await prefs.setDouble('temperature', jsonData['temperature']);
+      } else if (jsonData['temperature'] is String) {
+        jsonData['temperature'] =
+            double.tryParse(jsonData['temperature']) ?? 0.0;
+        await prefs.setDouble('temperature', jsonData['temperature']);
+      }
+
+// Kiểm tra và xử lý giá trị của humidity
+      if (jsonData['humidity'] is double) {
+        await prefs.setDouble('humidity', jsonData['humidity']);
+      } else if (jsonData['humidity'] is String) {
+        jsonData['humidity'] = double.tryParse(jsonData['humidity']) ?? 0.0;
+        await prefs.setDouble('humidity', jsonData['humidity']);
+      }
+
       await prefs.setString('location', jsonData['location']);
       await prefs.setString('relays', json.encode(jsonData['relays']));
       await prefs.setString(
@@ -43,9 +58,12 @@ Future<bool> fetchSignIn(TextEditingController emailController,
       Navigator.pushReplacementNamed(context, '/home');
       return true;
     } else {
-      return false;
+      final result = json.decode(response.body);
+      logger.e('Error: ${result['error']}');
+      throw Exception('Failed to load data: ${result['error']}');
     }
   } catch (e) {
+    logger.e('Error fetching data: $e');
     return false;
   }
 }

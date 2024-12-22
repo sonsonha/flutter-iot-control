@@ -7,9 +7,11 @@ plugins {
 
 android {
     namespace ="com.example.frontend_daktmt"
+    
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
-
+    namespace 'com.pauldemarco.flutter_blue'
+    
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
@@ -29,7 +31,7 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
-
+  
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.

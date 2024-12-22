@@ -5,13 +5,13 @@ import 'package:frontend_daktmt/custom_card.dart';
 class GaugeWidget extends StatelessWidget {
   final String label;
   final double value;
-
+  
   const GaugeWidget({super.key, required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
     String unit = label == 'Humidity' ? '%' : '°C';
-
+  
     // Xác định màu sắc ghi chú dựa trên giá trị
     Color annotationColor;
     if (value < 60) {

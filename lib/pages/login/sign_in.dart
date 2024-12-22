@@ -30,7 +30,7 @@ class _SignInState extends State<SignIn> {
 
       if (!isSuccess) {
         setState(() {
-          _errorMessage = 'Login failed. Please try again.';
+          _errorMessage = 'Invalid username or password. Please try again.';
         });
       } else {
         setState(() {

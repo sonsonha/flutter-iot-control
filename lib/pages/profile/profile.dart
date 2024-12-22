@@ -70,7 +70,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (profileJson != null) {
       // Decode the JSON string into a Map
       Map<String, dynamic> profileData = json.decode(profileJson);
-      logger.i(profileData);
+
       setState(() {
         _profileData = profileData; // Save the decoded profile data
         usernameController.text = profileData['username'] ?? '';

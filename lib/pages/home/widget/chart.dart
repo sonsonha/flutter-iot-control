@@ -46,14 +46,108 @@ class _ChartState extends State<Chart> {
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: fetchData(widget.token, widget.label, time),
       builder: (context, snapshot) {
+        Widget statusButtons = Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  time = 7;
+                });
+              },
+              child: const Text('7 Days'),
+            ),
+            const SizedBox(width: 10),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  time = 30;
+                });
+              },
+              child: const Text('30 Days'),
+            ),
+            const SizedBox(width: 10),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  time = 90;
+                });
+              },
+              child: const Text('90 Days'),
+            ),
+          ],
+        );
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Center(child: Text('No data available'));
+          // return const Center(child: CircularProgressIndicator());
+          return CustomCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.label == 'Humidity'
+                      ? 'Humidity (%)'
+                      : 'Temperature (°C)',
+                  style: const TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 20),
+                statusButtons,
+                const SizedBox(height: 20),
+                Text(
+                  time == 30 || time == 90
+                      ? 'Need to upgrade account'
+                      : 'No data available',
+                  style: const TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+                SizedBox(height: MediaQuery.of(context).size.width * 0.12),
+              ],
+            ),
+          );
         }
-
+        // Hiển thị loading
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Column(
+            children: [
+              Text(
+                widget.label == 'Humidity'
+                    ? 'Humidity (%)'
+                    : 'Temperature (°C)',
+                style:
+                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 20),
+              statusButtons,
+              const SizedBox(height: 20),
+              const Center(child: CircularProgressIndicator()),
+            ],
+          );
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return CustomCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.label == 'Humidity'
+                      ? 'Humidity (%)'
+                      : 'Temperature (°C)',
+                  style: const TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 20),
+                statusButtons,
+                const SizedBox(height: 20),
+                Text(
+                  time == 30 || time == 90
+                      ? 'Need to upgrade account'
+                      : 'No data available',
+                  style: const TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+                SizedBox(height: MediaQuery.of(context).size.width * 0.12),
+              ],
+            ),
+          );
+        }
         // Tạo danh sách FlSpot từ dữ liệu
         List<FlSpot> spots = snapshot.data!.asMap().entries.map((entry) {
           int index = entry.key;
@@ -69,7 +163,6 @@ class _ChartState extends State<Chart> {
 
           return FlSpot(xValue, yValue);
         }).toList();
-
         // Kiểm tra dữ liệu invalid (NaN hoặc Infinity)
         if (spots.any((spot) => spot.y.isNaN || spot.y.isInfinite)) {
           return const Center(child: Text('Invalid data points'));
@@ -92,37 +185,7 @@ class _ChartState extends State<Chart> {
                     const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        time = 7;
-                      });
-                    },
-                    child: const Text('7 Days'),
-                  ),
-                  const SizedBox(width: 10),
-                  ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        time = 30;
-                      });
-                    },
-                    child: const Text('30 Days'),
-                  ),
-                  const SizedBox(width: 10),
-                  ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        time = 90;
-                      });
-                    },
-                    child: const Text('90 Days'),
-                  ),
-                ],
-              ),
+              statusButtons,
               const SizedBox(height: 20),
               AspectRatio(
                 aspectRatio: Responsive.isMobile(context) ? 9 / 4 : 16 / 6,
@@ -135,14 +198,15 @@ class _ChartState extends State<Chart> {
                       bottomTitles: AxisTitles(
                         sideTitles: SideTitles(
                           showTitles: true,
-                          reservedSize: 40,
+                          reservedSize: 20,
                           interval: 1,
                           getTitlesWidget: (double value, TitleMeta meta) {
                             int index = value.toInt();
                             if (index < snapshot.data!.length) {
                               DateTime date = snapshot.data![index]['date'];
                               String formattedDate =
-                                  '${date.month}-${date.day}';
+                                  '${date.day}-${date.month}';
+
                               return SideTitleWidget(
                                 axisSide: meta.axisSide,
                                 space: 2,
