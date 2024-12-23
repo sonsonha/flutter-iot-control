@@ -220,7 +220,7 @@ class _ForgetState extends State<Forget> {
                       children: [
                         Expanded(
                           child: TextField(
-                            keyboardType: TextInputType.number,
+                            keyboardType: TextInputType.text,
                             controller: _code,
                             decoration: const InputDecoration(
                               label: Text(
