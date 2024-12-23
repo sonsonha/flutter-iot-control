@@ -6,7 +6,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
 
 final Logger logger = Logger();
-Future<bool> fetchSignIn(TextEditingController emailController,
+Future<String?> fetchSignIn(TextEditingController emailController,
     TextEditingController passwordController, BuildContext context) async {
   final baseUrl = dotenv.env['API_BASE_URL']!;
   final url = Uri.parse('http://$baseUrl/login');
@@ -56,15 +56,16 @@ Future<bool> fetchSignIn(TextEditingController emailController,
       await prefs.setString('profile', json.encode(jsonData['profile']));
 
       Navigator.pushReplacementNamed(context, '/home');
-      return true;
+      return null;
     } else {
       final result = json.decode(response.body);
       logger.e('Error: ${result['error']}');
-      throw Exception('Failed to load data: ${result['error']}');
+      String errorMessage = result['error'] ?? 'Unknown error occurred.';
+      return errorMessage;
     }
   } catch (e) {
     logger.e('Error fetching data: $e');
-    return false;
+    return 'Error fetching data: $e';
   }
 }
 

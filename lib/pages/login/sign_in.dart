@@ -25,12 +25,21 @@ class _SignInState extends State<SignIn> {
             _passwordController
                 .text.isNotEmpty //&& _emailController.text.isValidEmail()
         ) {
-      bool isSuccess =
-          await fetchSignIn(_emailController, _passwordController, context);
-
-      if (!isSuccess) {
+      if (_passwordController.text.length < 8) {
         setState(() {
-          _errorMessage = 'Invalid username or password. Please try again.';
+          _errorMessage = "Password must be at least 8 characters long.";
+        });
+        return;
+      }
+      String? errorMessage = await fetchSignIn(
+        _emailController,
+        _passwordController,
+        context,
+      );
+
+      if (errorMessage != null) {
+        setState(() {
+          _errorMessage = errorMessage;
         });
       } else {
         setState(() {
@@ -38,7 +47,9 @@ class _SignInState extends State<SignIn> {
         });
       }
     } else {
-      logger.w('Emails and passwords should not be left blank.');
+      setState(() {
+        _errorMessage = "Not enough information!";
+      });
     }
   }
 
@@ -141,7 +152,9 @@ class _SignInState extends State<SignIn> {
                           ),
                         ),
                         onChanged: (value) {
-                          setState(() {});
+                          setState(() {
+                            _errorMessage = null;
+                          });
                         },
                       ),
                       const SizedBox(height: 25.0),
@@ -208,7 +221,7 @@ class _SignInState extends State<SignIn> {
                           child: Text(
                             _errorMessage!,
                             style: const TextStyle(
-                              color: Color.fromARGB(255, 255, 0, 0),
+                              color: Colors.red,
                               fontWeight: FontWeight.bold,
                             ),
                           ),

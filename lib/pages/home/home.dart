@@ -44,6 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchSensorData() async {
+    logger.i("Fetching sensor data started");
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
 
@@ -52,7 +53,6 @@ class _HomeScreenState extends State<HomeScreen> {
       double temperatureData = prefs.getDouble('temperature') ?? 0.0;
 
       String? savedLocation = prefs.getString('location');
-
       if (savedLocation == null || savedLocation.isEmpty) {
         logger
             .w("No location found in SharedPreferences. Using default value.");
@@ -63,13 +63,14 @@ class _HomeScreenState extends State<HomeScreen> {
       if (coordinates.length == 2) {
         double fetchedLatitude = double.tryParse(coordinates[0]) ?? 0.0;
         double fetchedLongitude = double.tryParse(coordinates[1]) ?? 0.0;
-
-        setState(() {
-          humidity = humidityData;
-          temperature = temperatureData;
-          latitude = fetchedLatitude;
-          longitude = fetchedLongitude;
-        });
+        if (mounted) {
+          setState(() {
+            humidity = humidityData;
+            temperature = temperatureData;
+            latitude = fetchedLatitude;
+            longitude = fetchedLongitude;
+          });
+        }
       } else {
         logger.e("Invalid location format: $savedLocation");
       }

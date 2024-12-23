@@ -75,17 +75,33 @@ class _mapState extends State<map> {
     _getCurrentLocation(); // Lấy vị trí của người dùng nếu quyền đã được cấp
   }
 
+  // Future<void> _getCurrentLocation() async {
+  //   try {
+  //     final position = await Geolocator.getCurrentPosition();
+  //     setState(() {
+  //       _deviceLocation = LatLng(position.latitude, position.longitude);
+  //     });
+  //   } catch (e) {
+  //     // ignore: use_build_context_synchronously
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(content: Text('Unable to get a location: $e')),
+  //     );
+  //   }
+  // }
   Future<void> _getCurrentLocation() async {
     try {
       final position = await Geolocator.getCurrentPosition();
-      setState(() {
-        _deviceLocation = LatLng(position.latitude, position.longitude);
-      });
+      if (mounted) {
+        setState(() {
+          _deviceLocation = LatLng(position.latitude, position.longitude);
+        });
+      }
     } catch (e) {
-      // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unable to get a location: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unable to get a location: $e')),
+        );
+      }
     }
   }
 

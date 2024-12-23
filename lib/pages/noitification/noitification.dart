@@ -20,7 +20,7 @@ class noitification_setting extends StatelessWidget {
           onTap: () {
             showDialog(
               context: context,
-              barrierColor: Colors.transparent, 
+              barrierColor: Colors.transparent,
               builder: (BuildContext context) {
                 return Align(
                   alignment: Alignment.centerRight,
@@ -51,7 +51,7 @@ class noitification_setting extends StatelessWidget {
                               fontSize: 20, fontWeight: FontWeight.bold),
                         ),
                         SizedBox(height: 10),
-                        Text('lêu lêu'),
+                        Text('No new notifications'),
                         SizedBox(height: 20),
                       ],
                     ),
@@ -63,7 +63,8 @@ class noitification_setting extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(8.0),
             decoration: BoxDecoration(
-              color: const Color.fromARGB(0, 255, 255, 255).withOpacity(0.8), // Màu nền cho box
+              color: const Color.fromARGB(0, 255, 255, 255)
+                  .withOpacity(0.8), // Màu nền cho box
               borderRadius: BorderRadius.circular(50), // Bo góc box
               boxShadow: const [
                 BoxShadow(

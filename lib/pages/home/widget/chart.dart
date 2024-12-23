@@ -93,12 +93,7 @@ class _ChartState extends State<Chart> {
                 const SizedBox(height: 20),
                 statusButtons,
                 const SizedBox(height: 20),
-                Text(
-                  time == 30 || time == 90
-                      ? 'Need to upgrade account'
-                      : 'No data available',
-                  style: const TextStyle(fontSize: 16, color: Colors.grey),
-                ),
+                const Center(child: CircularProgressIndicator()),
                 SizedBox(height: MediaQuery.of(context).size.width * 0.12),
               ],
             ),
