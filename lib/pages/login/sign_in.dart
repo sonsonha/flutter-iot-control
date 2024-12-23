@@ -185,6 +185,11 @@ class _SignInState extends State<SignIn> {
                             ),
                           ),
                         ),
+                        onChanged: (value) {
+                          setState(() {
+                            _errorMessage = null;
+                          });
+                        },
                       ),
                       const SizedBox(height: 10),
                       Row(

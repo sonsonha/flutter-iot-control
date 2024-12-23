@@ -57,31 +57,42 @@ class _RegisterState extends State<Register> {
   }
 
   Future<void> _handleOnClick(BuildContext context) async {
-    bool isSuccess = await fetchConfirmcode(
-      _emailController.text,
-      _code.text,
-    );
+    if (_emailController.text.isNotEmpty && _code.text.isNotEmpty) {
+      String? confirmCodeResult = await fetchConfirmcode(
+        _emailController.text,
+        _code.text,
+      );
 
-    if (isSuccess) {
-      isSuccess = await fetchRegister(
-          _username,
-          _emailController,
-          // ignore: use_build_context_synchronously
-          _passwordController_1,
-          _aiouser,
-          _aiokey,
-          _phone,
-          // ignore: use_build_context_synchronously
-          context);
-
-      if (!isSuccess) {
+      if (confirmCodeResult != "Success verification code") {
         setState(() {
-          _errorMessage = "Đã xảy ra lỗi khi đăng ký. Vui lòng thử lại.";
+          _errorMessage = "Wrong code verification";
+        });
+        return;
+      }
+
+      String? registerResult = await fetchRegister(
+        _username,
+        _emailController,
+        _passwordController_1,
+        _aiouser,
+        _aiokey,
+        _phone,
+        // ignore: use_build_context_synchronously
+        context,
+      );
+
+      if (registerResult != "Successfully registered") {
+        setState(() {
+          _errorMessage = registerResult;
+        });
+      } else {
+        setState(() {
+          _errorMessage = null;
         });
       }
     } else {
       setState(() {
-        _errorMessage = "Mã xác thực không đúng";
+        _errorMessage = "Not enough information!";
       });
     }
   }
@@ -95,18 +106,23 @@ class _RegisterState extends State<Register> {
   }
 
   Future<void> _sendcode() async {
-    if (_emailController.toString().isEmpty) {
-      _errorMessage = "Vui lòng điền email";
+    if (_emailController.text.isEmpty) {
+      setState(() {
+        _errorMessage = "Not enough information!";
+      });
+      return;
     }
-    bool isSuccess = await fetchSendcode(_emailController.text);
-    if (isSuccess) {
+
+    String? sendCodeResult = await fetchSendcode(_emailController.text);
+
+    if (sendCodeResult == "Successful code submission") {
       setState(() {
         _isVerificationCodeVisible = true;
         _errorMessage = null;
       });
     } else {
       setState(() {
-        _errorMessage = 'Đã xảy ra lỗi khi gửi mã xác thực';
+        _errorMessage = sendCodeResult;
       });
     }
   }
@@ -182,13 +198,16 @@ class _RegisterState extends State<Register> {
                         ),
                       ),
                       onChanged: (value) {
-                        setState(() {});
-                      },
+                          setState(() {
+                            _errorMessage = null;
+                          });
+                        },
                     ),
                     // Password Field
                     _buildPasswordField(
                       controller: _passwordController_1,
                       label: 'Password',
+                                    
                     ),
                     // Confirm Password Field
                     _buildPasswordField(
@@ -199,7 +218,7 @@ class _RegisterState extends State<Register> {
                         controller: _aiouser, label: 'AIO Username'),
                     _buildTextField(controller: _aiokey, label: 'AIO Key'),
                     _buildTextField(controller: _phone, label: 'Phone number'),
-                    
+
                     const SizedBox(height: 20),
                     _buildSignUpButton_1(context),
                   ],
@@ -338,21 +357,21 @@ class _RegisterState extends State<Register> {
               _aiokey.text.isEmpty ||
               _phone.text.isEmpty) {
             setState(() {
-              _errorMessage = 'Vui lòng nhập đủ thông tin';
+              _errorMessage = 'Not enough information!';
             });
             return;
           }
 
           if (!_emailController.text.isValidEmail()) {
             setState(() {
-              _errorMessage = 'Email không đúng định dạng';
+              _errorMessage = 'Wrong email';
             });
             return;
           }
 
           if (_passwordController_1.text != _passwordController_2.text) {
             setState(() {
-              _errorMessage = 'Mật khẩu không khớp';
+              _errorMessage = 'Wrong password';
             });
             return;
           }
@@ -457,7 +476,9 @@ class _RegisterState extends State<Register> {
         suffixIcon: IconButton(
           icon: Icon(
             _passwordVisible ? Icons.visibility : Icons.visibility_off,
-            color:  _passwordVisible ? const Color.fromARGB(255, 30, 255, 0) :  const Color.fromARGB(255, 84, 84, 84),
+            color: _passwordVisible
+                ? const Color.fromARGB(255, 30, 255, 0)
+                : const Color.fromARGB(255, 84, 84, 84),
           ),
           onPressed: () {
             setState(() {

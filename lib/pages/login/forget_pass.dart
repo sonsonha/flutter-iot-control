@@ -54,38 +54,45 @@ class _ForgetState extends State<Forget> {
   Future<void> _handleOnClick(BuildContext context) async {
     if (_passwordController_1.text != _passwordController_2.text) {
       setState(() {
-        _errorMessage = 'Mật khẩu không khớp';
+        _errorMessage = 'Wrong password';
       });
       return;
     }
-    
-    if (_passwordController_1.text.isEmpty) {
+
+    if (_passwordController_1.text.isEmpty ||
+        _passwordController_1.text.length < 8) {
       setState(() {
-        _errorMessage = 'Mật khẩu phải có ít nhất 8 ký tự';
+        _errorMessage = 'Password has to be at least 8 characters';
       });
       return;
     }
-    bool isSuccess = await fetchConfirmcode(
+
+    String? confirmCodeResult = await fetchConfirmcode(
       _emailController.text,
       _code.text,
     );
 
-    if (isSuccess) {
-      isSuccess = await fetchForgetPassword(
-          // ignore: use_build_context_synchronously
-          _emailController,
-          _passwordController_1,
-          // ignore: use_build_context_synchronously
-          context);
+    if (confirmCodeResult != "Success verification code") {
+      setState(() {
+        _errorMessage = confirmCodeResult;
+      });
+      return;
+    }
 
-      if (!isSuccess) {
-        setState(() {
-          _errorMessage = "Đã xảy ra lỗi . Vui lòng thử lại.";
-        });
-      }
+    String? forgetPasswordResult = await fetchForgetPassword(
+      _emailController,
+      _passwordController_1,
+      // ignore: use_build_context_synchronously
+      context,
+    );
+
+    if (forgetPasswordResult != "Success") {
+      setState(() {
+        _errorMessage = forgetPasswordResult;
+      });
     } else {
       setState(() {
-        _errorMessage = "Mã xác thực không đúng";
+        _errorMessage = null;
       });
     }
   }
@@ -99,21 +106,27 @@ class _ForgetState extends State<Forget> {
   }
 
   Future<void> _sendcode() async {
-    _errorMessage = null;
+    setState(() {
+      _errorMessage = null; // Reset lỗi
+    });
 
-    if (_emailController.toString().isEmpty) {
-      _errorMessage = "Vui lòng điền email";
+    if (_emailController.text.isEmpty) {
+      setState(() {
+        _errorMessage = "Please enter your email";
+      });
+      return;
     }
 
-    bool isSuccess = await fetchSendcode(_emailController.text);
-    if (isSuccess) {
+    String? sendCodeResult = await fetchSendcode(_emailController.text);
+
+    if (sendCodeResult == "Successful code submission") {
       setState(() {
         _isVerificationCodeVisible = true;
-        _errorMessage = null;
+        _errorMessage = null; // Reset lỗi sau khi thành công
       });
     } else {
       setState(() {
-        _errorMessage = 'Đã xảy ra lỗi khi gửi mã xác thực';
+        _errorMessage = sendCodeResult;
       });
     }
   }
@@ -131,7 +144,7 @@ class _ForgetState extends State<Forget> {
         children: [
           Container(
             decoration: backgound_Color(),
-           padding: EdgeInsets.only(
+            padding: EdgeInsets.only(
                 top: isRowLayout ? 50.0 : 20.0, left: isRowLayout ? 55 : 222),
             alignment: Alignment.topLeft,
             child: const Text(
@@ -144,7 +157,7 @@ class _ForgetState extends State<Forget> {
             ),
           ),
           Padding(
-           padding: isRowLayout
+            padding: isRowLayout
                 ? const EdgeInsets.fromLTRB(10, 200, 10, 10)
                 : EdgeInsets.fromLTRB(
                     screenWidth * 0.34, 200, screenWidth * 0.34, 100),
@@ -187,7 +200,9 @@ class _ForgetState extends State<Forget> {
                         ),
                       ),
                       onChanged: (value) {
-                        setState(() {});
+                        setState(() {
+                          _errorMessage = null;
+                        });
                       },
                     ),
                     const SizedBox(height: 20),

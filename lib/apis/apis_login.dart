@@ -69,7 +69,7 @@ Future<String?> fetchSignIn(TextEditingController emailController,
   }
 }
 
-Future<bool> fetchRegister(
+Future<String> fetchRegister(
     TextEditingController username,
     TextEditingController emailController,
     TextEditingController passwordController,
@@ -101,30 +101,30 @@ Future<bool> fetchRegister(
     if (response.statusCode == 200) {
       // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đăng kí tài khoản thành công')),
+        const SnackBar(content: Text('Successfully registered')),
       );
       // ignore: use_build_context_synchronously
       Navigator.pushReplacementNamed(context, '/signin');
-      return true;
+      return 'Successfully registered';
     } else {
       final errorMessage =
-          json.decode(response.body)['message'] ?? 'Tài khoản này đã tồn tại';
+          json.decode(response.body)['message'] ?? 'This account already exists';
 
       // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(errorMessage)));
-      return false;
+      return errorMessage;
     }
   } catch (e) {
     // Handle any exceptions
     // ignore: use_build_context_synchronously
     ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Lỗi kết nối với server')));
-    return false;
+        .showSnackBar(const SnackBar(content: Text('Cannot connect to server')));
+    return 'Cannot connect to server';
   }
 }
 
-Future<bool> fetchForgetPassword(TextEditingController emailController,
+Future<String> fetchForgetPassword(TextEditingController emailController,
     TextEditingController passwordController, BuildContext context) async {
   final baseUrl = dotenv.env['API_BASE_URL']!;
   final url = Uri.parse('http://$baseUrl/forgot-password');
@@ -143,30 +143,30 @@ Future<bool> fetchForgetPassword(TextEditingController emailController,
     );
 
     if (response.statusCode == 200) {
-      if (!context.mounted) return false;
+      if (!context.mounted) return '';
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đổi mật khẩu thành công')),
+        const SnackBar(content: Text('Successfully changed password')),
       );
       Navigator.pushReplacementNamed(context, '/signin');
-      return true;
+      return 'Successfully changed password';
     } else {
-      if (!context.mounted) return false;
+      if (!context.mounted) return '';
       final errorMessage =
-          json.decode(response.body)['message'] ?? 'Tài khoản không tồn tại';
+          json.decode(response.body)['message'] ?? 'This account does not exist';
 
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(errorMessage)));
-      return false;
+      return errorMessage;
     }
   } catch (e) {
-    if (!context.mounted) return false;
+    if (!context.mounted) return '';
     ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Lỗi kết nối với server')));
-    return false;
+        .showSnackBar(const SnackBar(content: Text('Cannot connect to server')));
+    return 'Cannot connect to server';
   }
 }
 
-Future<bool> fetchSendcode(String email) async {
+Future<String> fetchSendcode(String email) async {
   final baseUrl = dotenv.env['API_BASE_URL']!;
   final url = Uri.parse('http://$baseUrl/email/send-code');
   try {
@@ -181,20 +181,20 @@ Future<bool> fetchSendcode(String email) async {
       }),
     );
     if (response.statusCode == 200) {
-      logger.i("Success");
+      logger.i("Successful code submission");
       // print('Response body: ${response.body}');
-      return true;
+      return 'Successful code submission';
     } else {
       logger.e("Failed to send verification code");
-      return false;
+      return 'Failed to send verification code';
     }
   } catch (error) {
     logger.e("Error: $error");
-    return false;
+    return 'Error: $error';
   }
 }
 
-Future<bool> fetchConfirmcode(String email, String code) async {
+Future<String> fetchConfirmcode(String email, String code) async {
   final baseUrl = dotenv.env['API_BASE_URL']!;
   final url = Uri.parse('http://$baseUrl/email/confirm-code');
   try {
@@ -211,11 +211,11 @@ Future<bool> fetchConfirmcode(String email, String code) async {
     );
 
     if (response.statusCode == 200) {
-      return true;
+      return 'Success verification code';
     } else {
-      return false;
+      return 'Failed to confirm verification code';
     }
   } catch (error) {
-    return false;
+    return 'Error: $error';
   }
 }
