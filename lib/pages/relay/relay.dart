@@ -97,6 +97,7 @@ class _RelayScreenState extends State<RelayScreen> {
 
       if (response.statusCode == 200) {
         List<dynamic> data = jsonDecode(response.body);
+        await prefs.setString('relays_home', json.encode(data));
         return data
             .map<String>((relay) => relay['relay_id'].toString())
             .toList();
@@ -133,13 +134,6 @@ class _RelayScreenState extends State<RelayScreen> {
       if (response.statusCode == 200) {
         var jsonData = jsonDecode(response.body);
         logger.i(jsonData);
-
-        // Update the relays_home in SharedPreferences
-        await prefs.setString(
-          'relays_home',
-          json.encode(jsonData['relays_home']),
-        );
-
         // Trigger fetchHomeRelays to refresh UI
         await fetchHomeRelays();
 
@@ -342,6 +336,7 @@ class _RelayScreenState extends State<RelayScreen> {
         // logger.i("Relay deleted successfully");
         if (mounted) {
           await fetchRelaysAPI(); // Refresh the list after deletion
+          await fetchHomeRelays();
         }
       } else {
         logger.w("Failed to delete relay: ${response.body}");

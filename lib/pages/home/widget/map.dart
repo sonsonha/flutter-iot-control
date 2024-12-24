@@ -130,7 +130,7 @@ class _mapState extends State<map> {
                     width: 40,
                     height: 40,
                     child: const Icon(
-                      Icons.people,
+                      Icons.emoji_people,
                       size: 40.0,
                       color: Colors.blue,
                     ),
