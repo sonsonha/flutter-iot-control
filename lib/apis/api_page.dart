@@ -263,7 +263,7 @@ Future<List<Map<String, dynamic>>> fetchhistorydata(
 
   if (response.statusCode == 200) {
     List<dynamic> data = json.decode(response.body);
-
+    
     return data.map((item) {
       if (item.containsKey('Date')) {
         try {

@@ -266,10 +266,13 @@ class _RelayScreenState extends State<RelayScreen> {
       );
 
       if (response.statusCode == 200) {
+        await fetchHomeRelays();
+
         logger.i("Relay $relayId is ${state ? 'ON' : 'OFF'}");
+        // prefs.setString('relay_$relayId', state.toString());
         // isTurnOn = state;
         // Fetch updated relays from the server after changing the relay status
-        await fetchRelaysAPI();
+        // await fetchRelaysAPI();
       } else {
         logger.w("Failed to change relay state: ${response.body}");
       }

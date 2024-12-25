@@ -1,5 +1,6 @@
 // import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:frontend_daktmt/custom_card.dart';
 import 'package:frontend_daktmt/nav_bar/nav_bar_left.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:http/http.dart' as http;
@@ -1335,25 +1336,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              Color.fromARGB(255, 23, 80, 116),
-              Color.fromARGB(255, 7, 40, 75)
-            ], // Gradient colors
-            begin: Alignment.topLeft, // Start point of the gradient
-            end: Alignment.bottomRight, // End point of the gradient
+              Color.fromARGB(255, 255, 255, 255),
+              Color.fromARGB(255, 255, 255, 255)
+            ], 
           ),
         ),
         child: AppBar(
           title: const Text(
-            'Schedule',
-            style: TextStyle(
-              fontSize: 24, // Set the font size
-              fontWeight: FontWeight.w600, // Semi-bold font weight
-              color: Colors.white, // Text color
-              letterSpacing: 1.2, // Letter spacing for readability
-              fontFamily: 'avenir', // Use a custom font family (optional)
-            ),
-          ),
-          centerTitle: true,
+            'Schedule'),
           actions: [
             if (_showDeleteIcon || _showEditIcon)
               IconButton(
@@ -1376,16 +1366,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       appBar: _buildAppBar(),
       drawer: const Navbar_left(),
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color.fromARGB(255, 232, 235, 236), // Light blue
-              Color.fromARGB(255, 194, 235, 243), // White
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
+        decoration: backgound_Color(),
 
         // Set background color of the body here
         child: Stack(

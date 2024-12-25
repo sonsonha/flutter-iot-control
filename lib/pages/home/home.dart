@@ -140,7 +140,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                   children: [
                                                     const toggle(
                                                       toggleHeight: 150.0,
-                                                      toggleWidth: 1000.0,
+                                                      toggleWidth: 695.0,
                                                       numOfRelay: 6,
                                                     ),
                                                     latitude == 0.0 &&

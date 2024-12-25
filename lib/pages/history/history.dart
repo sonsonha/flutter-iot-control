@@ -48,7 +48,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
         // Fetch data based on the selected dates
         List<Map<String, dynamic>> data =
             await fetchhistorydata(token, _startDate!, _endDate!);
-
+        if (data.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('No data found for the selected dates')),
+          );
+        }
         // Update the state to store the fetched history data
         setState(() {
           _historyData = data;
@@ -192,7 +197,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               children: [
                                 Text(
                                   historyItem['Date'] != null
-                                      ?DateFormat('dd/MM/yyyy HH:mm:ss ')
+                                      ? DateFormat('dd/MM/yyyy HH:mm:ss ')
                                           .format(DateTime.parse(
                                                   historyItem['Date'])
                                               .toLocal()) // Parse and format the date
