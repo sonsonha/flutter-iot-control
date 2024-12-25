@@ -144,9 +144,8 @@ class _ForgetState extends State<Forget> {
         children: [
           Container(
             decoration: backgound_Color(),
-            padding: EdgeInsets.only(
-                top: isRowLayout ? 50.0 : 20.0, left: isRowLayout ? 55 : 222),
-            alignment: Alignment.topLeft,
+            padding: EdgeInsets.only(top: isRowLayout ? 50.0 : 50.0),
+            alignment: Alignment.topCenter,
             child: const Text(
               'Forget password!',
               style: TextStyle(
@@ -160,13 +159,13 @@ class _ForgetState extends State<Forget> {
             padding: isRowLayout
                 ? const EdgeInsets.fromLTRB(10, 200, 10, 10)
                 : EdgeInsets.fromLTRB(
-                    screenWidth * 0.34, 200, screenWidth * 0.34, 100),
+                    screenWidth * 0.36, 200, screenWidth * 0.36, 100),
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(22),
                 color: Colors.white,
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 40),
+              padding: const EdgeInsets.symmetric(horizontal: 30),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -259,8 +258,8 @@ class _ForgetState extends State<Forget> {
                                 borderRadius: BorderRadius.circular(30),
                                 gradient: const LinearGradient(
                                   colors: [
-                                    Color.fromARGB(255, 0, 102, 255),
-                                    Color.fromARGB(144, 0, 38, 255)
+                                    Color.fromARGB(255, 252, 201, 201),
+                                    Color.fromARGB(255, 148, 59, 216)
                                   ],
                                 ),
                               ),
@@ -282,62 +281,48 @@ class _ForgetState extends State<Forget> {
                           ),
                       ],
                     ),
+                    const SizedBox(height: 10),
                     _buildPasswordField(
                       controller: _passwordController_1,
                       label: 'Password',
                     ),
+                    const SizedBox(height: 10),
                     _buildPasswordField(
                       controller: _passwordController_2,
                       label: 'Confirm Password',
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 40),
                     _buildSignUpButton_2(context),
                   ],
-                  SizedBox(height: screenHeight * 0.2),
-                  Align(
-                    alignment:
-                        Alignment.bottomCenter, // Aligns to the bottom center
-                    child: Row(
-                      mainAxisAlignment:
-                          MainAxisAlignment.center, // Centers the Row
-                      children: [
-                        GestureDetector(
-                          onTap: () => _handleSignInClick(context),
-                          child: const Text(
-                            'Sign in',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 17,
-                              color: Color.fromARGB(255, 0, 47, 255),
-                            ),
-                          ),
+                  SizedBox(height: screenHeight * 0.05),
+                    Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      GestureDetector(
+                      onTap: () => _handleSignInClick(context),
+                      child: const Text(
+                        'Sign In',
+                        style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 17,
+                        color: Color.fromARGB(255, 0, 47, 255),
                         ),
-                        const SizedBox(width: 10), // Space between the texts
-                        const Text(
-                          '-', // Dash between the texts
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 17,
-                            color: Color(0xff281537),
-                          ),
+                      ),
+                      ),
+                      const SizedBox(width: 200),
+                      GestureDetector(
+                      onTap: () => _handleSignUpClick(context),
+                      child: const Text(
+                        'Sign Up',
+                        style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 17,
+                        color: Color.fromARGB(255, 0, 47, 255),
                         ),
-                        const SizedBox(
-                            width:
-                                10), // Space between the dash and the next text
-                        GestureDetector(
-                          onTap: () => _handleSignUpClick(context),
-                          child: const Text(
-                            'Sign up',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 17,
-                              color: Color.fromARGB(255, 0, 47, 255),
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
+                      ),
+                    ],
                     ),
-                  ),
                 ],
               ),
             ),
@@ -353,7 +338,7 @@ class _ForgetState extends State<Forget> {
           MainAxisAlignment.center, // Aligns the button to the right
       children: [
         SizedBox(
-          width: 202,
+          width: 250,
           height: 57,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -380,13 +365,16 @@ class _ForgetState extends State<Forget> {
               }
 
               _sendcode();
+              startTimer();
             },
             child: Ink(
-              width: 200,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(30),
                 gradient: const LinearGradient(
-                  colors: [Color.fromARGB(255, 0, 102, 255), Color(0xff281537)],
+                  colors: [
+                    Color.fromARGB(255, 252, 201, 201),
+                    Color.fromARGB(255, 148, 59, 216)
+                  ],
                 ),
               ),
               child: Container(
@@ -409,7 +397,7 @@ class _ForgetState extends State<Forget> {
 
   Widget _buildSignUpButton_2(BuildContext context) {
     return SizedBox(
-      width: double.infinity,
+      width: 250,
       height: 55,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
@@ -425,7 +413,10 @@ class _ForgetState extends State<Forget> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(30),
             gradient: const LinearGradient(
-              colors: [Color.fromARGB(255, 255, 255, 255), Color(0xff281537)],
+              colors: [
+                Color.fromARGB(255, 252, 201, 201),
+                Color.fromARGB(255, 148, 59, 216)
+              ],
             ),
           ),
           child: Container(
@@ -468,7 +459,7 @@ class _ForgetState extends State<Forget> {
     required String label,
   }) {
     return SizedBox(
-      height: 40,
+      height: 50,
       child: TextField(
         controller: controller,
         obscureText: !_passwordVisible,
@@ -481,7 +472,7 @@ class _ForgetState extends State<Forget> {
           suffixIcon: IconButton(
             icon: Icon(
               _passwordVisible ? Icons.visibility : Icons.visibility_off,
-              color: const Color.fromARGB(255, 0, 0, 0),
+              color: _passwordVisible ? Colors.green : Colors.grey,
             ),
             onPressed: () {
               setState(() {

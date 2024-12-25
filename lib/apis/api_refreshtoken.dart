@@ -1,7 +1,5 @@
 import 'dart:async';
-// import 'package:frontend_daktmt/apis/api_page.dart';
 import 'package:frontend_daktmt/apis/api_page.dart';
-// import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -52,7 +50,7 @@ Future<String> fetchRefreshToken() async {
 }
 
 void startRefreshTokenTimer(Function updateSensorData) {
-  Timer.periodic(const Duration(minutes: 2), (timer) async {
+  Timer.periodic(const Duration(minutes: 30), (timer) async {
     // Lấy token mới
 
     final token = await fetchRefreshToken();

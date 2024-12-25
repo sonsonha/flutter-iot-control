@@ -86,7 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final double gaugeHeight = isMobile ? 200.0 : 150.0;
     final double gaugeWidth = isMobile ? double.infinity : 100.0;
     final bool isRowLayout = isDesktop;
-
+    final screenWidth = MediaQuery.of(context).size.width;
     return Scaffold(
       drawer: const Navbar_left(),
       endDrawer: const Navbar_right(
@@ -138,9 +138,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                                 flex: 3,
                                                 child: Column(
                                                   children: [
-                                                    const toggle(
+                                                    toggle(
                                                       toggleHeight: 150.0,
-                                                      toggleWidth: 695.0,
+                                                      toggleWidth: screenWidth*0.44,
                                                       numOfRelay: 6,
                                                     ),
                                                     latitude == 0.0 &&

@@ -106,6 +106,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       Map<String, dynamic> updatedData = {};
 
       // So sánh các giá trị từ TextEditingController với _profileData
+      if(fullnameController.text.trim() != _profileData?['fullname']) {
+        updatedData['fullname'] = fullnameController.text.trim();
+        prefs.remove('fullname');
+      }
       if (usernameController.text.trim() != _profileData?['username']) {
         updatedData['username'] = usernameController.text.trim();
         prefs.remove('username');
@@ -295,16 +299,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ],
             ),
-            Text(
-              _profileData?['fullname'] ?? 'N/A',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+            // Text(
+            //   _profileData?['fullname'] ?? 'N/A',
+            //   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            // ),
             const Divider(
               color: Color.fromARGB(255, 141, 140, 140),
               thickness: 0.3,
               indent: 20,
               endIndent: 20,
             ),
+            _buildEditableProfileItem(fullnameController, 'Full Name'),
             _buildEditableProfileItem(usernameController, 'Username'),
             _buildEditableProfileItem(emailController, 'Email'),
             _buildEditableProfileItem(newpasswordController, 'Password'),

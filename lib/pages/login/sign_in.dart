@@ -73,7 +73,7 @@ class _SignInState extends State<SignIn> {
             Container(
               decoration: backgound_Color(),
               padding:
-                  EdgeInsets.only(top: 120.0, left: isRowLayout ? 55 : 222),
+                  EdgeInsets.only(top: 120.0, left: isRowLayout ? 70 : 222),
               alignment: Alignment.topLeft,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -202,7 +202,7 @@ class _SignInState extends State<SignIn> {
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 17,
-                                color: Color.fromARGB(255, 0, 132, 255),
+                                color: Color.fromARGB(255, 0, 47, 255),
                               ),
                             ),
                           ),
@@ -213,7 +213,7 @@ class _SignInState extends State<SignIn> {
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 17,
-                                color: Color.fromARGB(255, 0, 132, 255),
+                                color: Color.fromARGB(255, 0, 47, 255),
                               ),
                             ),
                           ),

@@ -14,6 +14,7 @@ class Register extends StatefulWidget {
 }
 
 class _RegisterState extends State<Register> {
+  final TextEditingController _fullname = TextEditingController();
   final TextEditingController _username = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController_1 = TextEditingController();
@@ -71,6 +72,7 @@ class _RegisterState extends State<Register> {
       }
 
       String? registerResult = await fetchRegister(
+        _fullname,
         _username,
         _emailController,
         _passwordController_1,
@@ -140,8 +142,8 @@ class _RegisterState extends State<Register> {
           Container(
             decoration: backgound_Color(),
             padding: EdgeInsets.only(
-                top: isRowLayout ? 50.0 : 10.0, left: isRowLayout ? 55 : 222),
-            alignment: Alignment.topLeft,
+                top: isRowLayout ? 50.0 : 60.0),
+            alignment: Alignment.topCenter,
             child: const Text(
               'Register!',
               style: TextStyle(
@@ -155,19 +157,19 @@ class _RegisterState extends State<Register> {
             padding: isRowLayout
                 ? const EdgeInsets.fromLTRB(10, 200, 10, 10)
                 : EdgeInsets.fromLTRB(
-                    screenWidth * 0.34, 100, screenWidth * 0.34, 100),
+                    screenWidth * 0.36, 150, screenWidth * 0.36, 100),
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(22),
                 color: Colors.white,
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 18),
+              padding: const EdgeInsets.symmetric(horizontal: 35),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (_errorMessage != null)
                     Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
+                      padding: const EdgeInsets.only(top: 0.0),
                       child: Text(
                         _errorMessage!,
                         style: const TextStyle(
@@ -178,7 +180,9 @@ class _RegisterState extends State<Register> {
                     ),
                   if (!_isVerificationCodeVisible) ...[
                     // Username Field
+                    _buildTextField(controller: _fullname, label: 'Full name'),
                     _buildTextField(controller: _username, label: 'Username'),
+
                     // Email Field with validation icon
                     TextField(
                       controller: _emailController,
@@ -198,16 +202,15 @@ class _RegisterState extends State<Register> {
                         ),
                       ),
                       onChanged: (value) {
-                          setState(() {
-                            _errorMessage = null;
-                          });
-                        },
+                        setState(() {
+                          _errorMessage = null;
+                        });
+                      },
                     ),
                     // Password Field
                     _buildPasswordField(
                       controller: _passwordController_1,
                       label: 'Password',
-                                    
                     ),
                     // Confirm Password Field
                     _buildPasswordField(
@@ -217,7 +220,11 @@ class _RegisterState extends State<Register> {
                     _buildTextField(
                         controller: _aiouser, label: 'AIO Username'),
                     _buildTextField(controller: _aiokey, label: 'AIO Key'),
-                    _buildTextField(controller: _phone, label: 'Phone number'),
+                    _buildTextField(
+                      controller: _phone,
+                      label: 'Phone number',
+                      keyboardType: TextInputType.number,
+                    ),
 
                     const SizedBox(height: 20),
                     _buildSignUpButton_1(context),
@@ -273,8 +280,8 @@ class _RegisterState extends State<Register> {
                                 borderRadius: BorderRadius.circular(30),
                                 gradient: const LinearGradient(
                                   colors: [
-                                    Color.fromARGB(255, 0, 132, 255),
-                                    Color.fromARGB(94, 73, 158, 255)
+                                    Color.fromARGB(255, 252, 201, 201),
+                                    Color.fromARGB(255, 148, 59, 216)
                                   ],
                                 ),
                               ),
@@ -338,7 +345,7 @@ class _RegisterState extends State<Register> {
 
   Widget _buildSignUpButton_1(BuildContext context) {
     return SizedBox(
-      width: double.infinity,
+      width: 250,
       height: 55,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
@@ -350,7 +357,8 @@ class _RegisterState extends State<Register> {
           ),
         ),
         onPressed: () async {
-          if (_username.text.isEmpty ||
+          if (_fullname.text.isEmpty ||
+              _username.text.isEmpty ||
               _emailController.text.isEmpty ||
               _passwordController_1.text.isEmpty ||
               _aiouser.text.isEmpty ||
@@ -364,18 +372,40 @@ class _RegisterState extends State<Register> {
 
           if (!_emailController.text.isValidEmail()) {
             setState(() {
-              _errorMessage = 'Wrong email';
+              _errorMessage = 'Wrong email format';
             });
             return;
           }
 
           if (_passwordController_1.text != _passwordController_2.text) {
             setState(() {
-              _errorMessage = 'Wrong password';
+              _errorMessage = 'Password mismatch';
             });
             return;
           }
+          if (_passwordController_1.text.length < 8) {
+            setState(() {
+              _errorMessage =
+                  'Password must not be less than 8 characters long';
+            });
+            return;
+          }
+          if (!RegExp(r'^[0-9]+$').hasMatch(_phone.text)) {
+            setState(() {
+              _errorMessage = 'Phone number must contain only digits';
+            });
+            return;
+          }
+
+          if (_phone.text.length < 10 || _phone.text.length > 11) {
+            setState(() {
+              _errorMessage = 'Phone number must be 10 or 11 characters long';
+            });
+            return;
+          }
+
           _sendcode();
+          startTimer();
         },
         child: Ink(
           decoration: BoxDecoration(
@@ -405,7 +435,7 @@ class _RegisterState extends State<Register> {
 
   Widget _buildSignUpButton_2(BuildContext context) {
     return SizedBox(
-      width: 100,
+      width: 250,
       height: 55,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
@@ -421,7 +451,10 @@ class _RegisterState extends State<Register> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(30),
             gradient: const LinearGradient(
-              colors: [Color.fromARGB(255, 3, 3, 3), Color(0xff281537)],
+              colors: [
+                Color.fromARGB(255, 252, 201, 201),
+                Color.fromARGB(255, 148, 59, 216)
+              ],
             ),
           ),
           child: Container(
@@ -443,9 +476,11 @@ class _RegisterState extends State<Register> {
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
+    TextInputType keyboardType = TextInputType.text,
   }) {
     return TextField(
       controller: controller,
+      keyboardType: keyboardType,
       decoration: InputDecoration(
         label: Text(
           label,
@@ -476,9 +511,7 @@ class _RegisterState extends State<Register> {
         suffixIcon: IconButton(
           icon: Icon(
             _passwordVisible ? Icons.visibility : Icons.visibility_off,
-            color: _passwordVisible
-                ? const Color.fromARGB(255, 30, 255, 0)
-                : const Color.fromARGB(255, 84, 84, 84),
+            color: _passwordVisible ? Colors.green : Colors.grey,
           ),
           onPressed: () {
             setState(() {

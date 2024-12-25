@@ -28,7 +28,7 @@ BoxDecoration backgound_Color() {
     gradient: LinearGradient(
       colors: [
         Color.fromARGB(255, 0, 94, 255),
-        Color.fromARGB(255, 38, 255, 0),
+        Color.fromARGB(255, 27, 177, 0),
         Color.fromARGB(255, 255, 187, 0),
       ],
       begin: Alignment.topLeft,
