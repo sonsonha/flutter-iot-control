@@ -1,13 +1,12 @@
 import 'dart:io';
 // import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:frontend_daktmt/apis/api_delete.dart';
+import 'package:frontend_daktmt/apis/api_profile.dart';
 import 'package:frontend_daktmt/custom_card.dart';
 import 'package:frontend_daktmt/nav_bar/nav_bar_left.dart';
 import 'package:frontend_daktmt/responsive.dart';
 // import 'package:io/ansi.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:frontend_daktmt/apis/api_page.dart';
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import 'package:logger/logger.dart';
@@ -195,9 +194,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (currentPassword.isEmpty) {
         throw Exception('Current password is required.');
       }
-      
+
       await fetchDeleteProfile(token!, currentPassword);
-      await prefs.clear(); 
+      await prefs.clear();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile deleted successfully!')),
@@ -211,8 +210,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       logger.e('Error: $e');
     }
   }
-
-
 
   @override
   Widget build(BuildContext context) {

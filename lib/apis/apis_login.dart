@@ -222,3 +222,48 @@ Future<String> fetchConfirmcode(String email, String code) async {
     return 'Error: $error';
   }
 }
+
+// ignore: camel_case_types
+class apilogout {
+  final String apiUrl =
+      'http://${dotenv.env['API_BASE_URL']}/logout'; // URL API đăng xuất
+
+  Future<String?> getAccessToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('accessToken'); // Lấy token từ SharedPreferences
+  }
+
+  Future<bool> logoutUser() async {
+    String? token = await getAccessToken(); // Lấy token
+
+    if (token == null) {
+      return false; // Không có token, không thể đăng xuất
+    }
+
+    try {
+      final response = await http.get(
+        // Sử dụng POST thay vì GET
+        Uri.parse(apiUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token', // Gửi token trong header
+        },
+      );
+
+      if (response.statusCode == 200) {
+        // Nếu đăng xuất thành công, xóa token
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('accessToken'); // Xóa token
+        await prefs.clear();
+        return true; // Trả về true nếu đăng xuất thành công
+      } else {
+        final result = json.decode(response.body);
+        logger.e('Error: ${result['error']}');
+        return false; // Trả về false nếu có lỗi
+      }
+    } catch (error) {
+      logger.e('Error logging out: $error');
+      return false; // Trả về false nếu có lỗi
+    }
+  }
+}
