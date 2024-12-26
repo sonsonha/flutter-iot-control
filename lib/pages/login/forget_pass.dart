@@ -139,7 +139,7 @@ class _ForgetState extends State<Forget> {
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
-      resizeToAvoidBottomInset: false,
+      resizeToAvoidBottomInset: true,
       body: Stack(
         children: [
           Container(
@@ -155,175 +155,177 @@ class _ForgetState extends State<Forget> {
               ),
             ),
           ),
-          Padding(
-            padding: isRowLayout
-                ? const EdgeInsets.fromLTRB(10, 200, 10, 10)
-                : EdgeInsets.fromLTRB(
-                    screenWidth * 0.36, 200, screenWidth * 0.36, 100),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(22),
-                color: Colors.white,
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 30),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (_errorMessage != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: Text(
-                        _errorMessage!,
-                        style: const TextStyle(
-                          color: Colors.red,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  if (!_isVerificationCodeVisible) ...[
-                    TextField(
-                      controller: _emailController,
-                      decoration: InputDecoration(
-                        suffixIcon: Icon(
-                          Icons.check,
-                          color: _emailController.text.isValidEmail()
-                              ? Colors.green
-                              : Colors.grey,
-                        ),
-                        label: const Text(
-                          'Email',
-                          style: TextStyle(
+          SingleChildScrollView(
+            child: Padding(
+              padding: isRowLayout
+                  ? const EdgeInsets.fromLTRB(10, 300, 10, 10)
+                  : EdgeInsets.fromLTRB(
+                      screenWidth * 0.36, 200, screenWidth * 0.36, 100),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(22),
+                  color: Colors.white,
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 30,vertical: 100),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (_errorMessage != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Text(
+                          _errorMessage!,
+                          style: const TextStyle(
+                            color: Colors.red,
                             fontWeight: FontWeight.bold,
-                            color: Color.fromARGB(255, 3, 3, 3),
                           ),
                         ),
                       ),
-                      onChanged: (value) {
-                        setState(() {
-                          _errorMessage = null;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 20),
-                    _buildSignUpButton_1(context),
-                  ],
-                  if (_isVerificationCodeVisible) ...[
-                    const Text(
-                      'Enter the verification code sent to your email',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Color.fromARGB(255, 0, 17, 255)),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            keyboardType: TextInputType.text,
-                            controller: _code,
-                            decoration: const InputDecoration(
-                              label: Text(
-                                'Verification Code',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Color.fromARGB(255, 0, 0, 0),
-                                ),
-                              ),
+                    if (!_isVerificationCodeVisible) ...[
+                      TextField(
+                        controller: _emailController,
+                        decoration: InputDecoration(
+                          suffixIcon: Icon(
+                            Icons.check,
+                            color: _emailController.text.isValidEmail()
+                                ? Colors.green
+                                : Colors.grey,
+                          ),
+                          label: const Text(
+                            'Email',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Color.fromARGB(255, 3, 3, 3),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        if (_isTimerActive)
-                          Text(
-                            '$_start',
-                            style: const TextStyle(
-                                color: Colors.grey, fontSize: 16),
-                          )
-                        else
-                          ElevatedButton(
-                            onPressed: () {
-                              startTimer();
-                              _sendcode();
-                            },
-                            style: ElevatedButton.styleFrom(
-                              padding: EdgeInsets.zero,
-                              backgroundColor: Colors.transparent,
-                              shadowColor: Colors.transparent,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                            ),
-                            child: Ink(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(30),
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    Color.fromARGB(255, 252, 201, 201),
-                                    Color.fromARGB(255, 148, 59, 216)
-                                  ],
-                                ),
-                              ),
-                              child: Container(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 12),
-                                alignment: Alignment.center,
-                                height: 40,
-                                child: const Text(
-                                  'Send',
+                        onChanged: (value) {
+                          setState(() {
+                            _errorMessage = null;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      _buildSignUpButton_1(context),
+                    ],
+                    if (_isVerificationCodeVisible) ...[
+                      const Text(
+                        'Enter the verification code sent to your email',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Color.fromARGB(255, 0, 17, 255)),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              keyboardType: TextInputType.text,
+                              controller: _code,
+                              decoration: const InputDecoration(
+                                label: Text(
+                                  'Verification Code',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                    color: Colors.white,
+                                    color: Color.fromARGB(255, 0, 0, 0),
                                   ),
                                 ),
                               ),
                             ),
                           ),
+                          const SizedBox(width: 10),
+                          if (_isTimerActive)
+                            Text(
+                              '$_start',
+                              style: const TextStyle(
+                                  color: Colors.grey, fontSize: 16),
+                            )
+                          else
+                            ElevatedButton(
+                              onPressed: () {
+                                startTimer();
+                                _sendcode();
+                              },
+                              style: ElevatedButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                backgroundColor: Colors.transparent,
+                                shadowColor: Colors.transparent,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                              ),
+                              child: Ink(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(30),
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      Color.fromARGB(255, 252, 201, 201),
+                                      Color.fromARGB(255, 148, 59, 216)
+                                    ],
+                                  ),
+                                ),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12),
+                                  alignment: Alignment.center,
+                                  height: 40,
+                                  child: const Text(
+                                    'Send',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      _buildPasswordField(
+                        controller: _passwordController_1,
+                        label: 'Password',
+                      ),
+                      const SizedBox(height: 10),
+                      _buildPasswordField(
+                        controller: _passwordController_2,
+                        label: 'Confirm Password',
+                      ),
+                      const SizedBox(height: 40),
+                      _buildSignUpButton_2(context),
+                    ],
+                    SizedBox(height: screenHeight * 0.05),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        GestureDetector(
+                          onTap: () => _handleSignInClick(context),
+                          child: const Text(
+                            'Sign In',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 17,
+                              color: Color.fromARGB(255, 0, 47, 255),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 200),
+                        GestureDetector(
+                          onTap: () => _handleSignUpClick(context),
+                          child: const Text(
+                            'Sign Up',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 17,
+                              color: Color.fromARGB(255, 0, 47, 255),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 10),
-                    _buildPasswordField(
-                      controller: _passwordController_1,
-                      label: 'Password',
-                    ),
-                    const SizedBox(height: 10),
-                    _buildPasswordField(
-                      controller: _passwordController_2,
-                      label: 'Confirm Password',
-                    ),
-                    const SizedBox(height: 40),
-                    _buildSignUpButton_2(context),
                   ],
-                  SizedBox(height: screenHeight * 0.05),
-                    Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      GestureDetector(
-                      onTap: () => _handleSignInClick(context),
-                      child: const Text(
-                        'Sign In',
-                        style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 17,
-                        color: Color.fromARGB(255, 0, 47, 255),
-                        ),
-                      ),
-                      ),
-                      const SizedBox(width: 200),
-                      GestureDetector(
-                      onTap: () => _handleSignUpClick(context),
-                      child: const Text(
-                        'Sign Up',
-                        style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 17,
-                        color: Color.fromARGB(255, 0, 47, 255),
-                        ),
-                      ),
-                      ),
-                    ],
-                    ),
-                ],
+                ),
               ),
             ),
           ),

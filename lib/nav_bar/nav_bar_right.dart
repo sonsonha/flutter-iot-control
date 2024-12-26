@@ -130,8 +130,8 @@ class _nabarright_setState extends State<nabarright_set> {
                       ? (profileData!['profileImage'] != null
                           ? Image.memory(
                               base64Decode(profileData!['profileImage']),
-                              width: 35,
-                              height: 35,
+                              width: 30,
+                              height: 30,
                               fit: BoxFit.cover,
                             )
                           : CircleAvatar(
@@ -139,14 +139,14 @@ class _nabarright_setState extends State<nabarright_set> {
                               child: Text(
                                 profileData!['username'][0].toUpperCase(),
                                 style: TextStyle(
-                                  fontSize: 20,
+                                  fontSize: 18,
                                   color: Colors.primaries[
                                       DateTime.now().second %
                                           Colors.primaries.length],
                                 ),
                               ),
                             ))
-                      : const Icon(Icons.account_circle, size: 35),
+                      : const Icon(Icons.account_circle, size: 30),
                 ),
                 SizedBox(width: isRowLayout ? 8 : 0),
                 isRowLayout
@@ -158,7 +158,9 @@ class _nabarright_setState extends State<nabarright_set> {
                         ),
                       )
                     : Container(),
-                SizedBox(width: isRowLayout ? 8 : 0),
+                SizedBox(width: isRowLayout ? 8 : 0, height: 10),
+                
+
               ],
             ),
           ),
@@ -213,7 +215,7 @@ class Navbar_right extends StatelessWidget {
                   : const Icon(
                       Icons.account_circle,
                       size: 80,
-                      color: Colors.grey,
+                      color: Color.fromARGB(255, 255, 0, 0),
                     ),
             ),
             decoration: const BoxDecoration(

@@ -1,6 +1,7 @@
 import 'dart:io';
 // import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:frontend_daktmt/apis/api_delete.dart';
 import 'package:frontend_daktmt/custom_card.dart';
 import 'package:frontend_daktmt/nav_bar/nav_bar_left.dart';
 import 'package:frontend_daktmt/responsive.dart';
@@ -185,12 +186,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _deleteProfile() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      var token = prefs.getString('accessToken');
+      var currentPassword = currentpasswordController.text.trim();
+
+      if (currentPassword.isEmpty) {
+        throw Exception('Current password is required.');
+      }
+      
+      await fetchDeleteProfile(token!, currentPassword);
+      await prefs.clear(); 
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile deleted successfully!')),
+      );
+      Navigator.of(context).pushReplacementNamed('/');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to delete profile: $e')),
+      );
+      logger.e('Error: $e');
+    }
+  }
+
+
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = Responsive.isDesktop(context);
     final bool isRowLayout = isDesktop;
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       drawer: const Navbar_left(),
       appBar: AppBar(
         title: const Text('Profile'),
@@ -452,10 +482,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               onPressed: () {
                 if (currentpasswordController.text.trim().isNotEmpty) {
-                  _updateProfile(
-                    currentPassword: currentpasswordController.text
-                        .trim(), // Truyền mật khẩu hiện tại
-                  );
+                  _deleteProfile();
                   setState(() {
                     isEditing = false;
                   });
