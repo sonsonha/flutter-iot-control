@@ -110,8 +110,8 @@ Future<String> fetchRegister(
       Navigator.pushReplacementNamed(context, '/signin');
       return 'Successfully registered';
     } else {
-      final errorMessage = json.decode(response.body)['message'] ??
-          'This account already exists';
+      final errorMessage =
+          json.decode(response.body)['error'] ?? 'This account already exists';
 
       // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context)
@@ -154,8 +154,8 @@ Future<String> fetchForgetPassword(TextEditingController emailController,
       return 'Successfully changed password';
     } else {
       if (!context.mounted) return '';
-      final errorMessage = json.decode(response.body)['message'] ??
-          'This account does not exist';
+      final errorMessage =
+          json.decode(response.body)['error'] ?? 'This account does not exist';
 
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(errorMessage)));
