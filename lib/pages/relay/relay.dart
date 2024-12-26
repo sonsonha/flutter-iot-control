@@ -525,10 +525,12 @@ class _RelayScreenState extends State<RelayScreen> {
       numDeletedRelay++;
     }
     if (numDeletedRelay <= 1) {
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("$numDeletedRelay relay deleted")),
       );
     } else {
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("$numDeletedRelay relays deleted")),
       );
@@ -945,6 +947,7 @@ class _RelayScreenState extends State<RelayScreen> {
                         color: [
                           const Color.fromARGB(255, 19, 76, 130),
                           const Color(0xFF5FC6FF)
+                        // ignore: deprecated_member_use
                         ].last.withOpacity(0.4),
                         blurRadius: 8,
                         spreadRadius: 2,

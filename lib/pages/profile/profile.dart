@@ -1,8 +1,10 @@
 import 'dart:io';
+// import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:frontend_daktmt/custom_card.dart';
 import 'package:frontend_daktmt/nav_bar/nav_bar_left.dart';
 import 'package:frontend_daktmt/responsive.dart';
+// import 'package:io/ansi.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend_daktmt/apis/api_page.dart';
 import 'dart:convert';
@@ -85,6 +87,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
     } else {
       logger.i("No profile data found in SharedPreferences.");
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No profile data found.')),
       );
@@ -106,7 +109,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       Map<String, dynamic> updatedData = {};
 
       // So sánh các giá trị từ TextEditingController với _profileData
-      if(fullnameController.text.trim() != _profileData?['fullname']) {
+      if (fullnameController.text.trim() != _profileData?['fullname']) {
         updatedData['fullname'] = fullnameController.text.trim();
         prefs.remove('fullname');
       }
@@ -147,6 +150,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       // Nếu không có thay đổi nào (ngoài currentpassword)
       if (updatedData.length == 1 &&
           updatedData.containsKey('currentpassword')) {
+        // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('No changes were made.')),
         );
@@ -167,15 +171,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
         prefs.setString('profile', json.encode(_profileData));
       });
       // Hiển thị thông báo thành công
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile updated successfully!')),
       );
     } catch (e) {
       // Xử lý lỗi và hiển thị thông báo lỗi
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to update profile: $e')),
       );
-      print('Error: $e');
+      logger.e('Error: $e');
     }
   }
 
@@ -278,38 +284,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
                 GestureDetector(
-                  onTap: isEditing
-                      ? () => _pickImage(true)
-                      : null, // Chọn ảnh cho avatar
+                  onTap: isEditing ? () => _pickImage(true) : null,
                   child: CircleAvatar(
                     radius: 50,
-                    backgroundImage: avatarImageFile != null
-                        ? FileImage(
-                            avatarImageFile!) // Sử dụng FileImage thay vì MemoryImage
-                        : null,
+                    // backgroundImage: avatarImageFile != null
+                    //     ? FileImage(
+                    //         avatarImageFile!)
+                    //     : null,
+                    backgroundColor: const Color.fromARGB(255, 240, 240, 240),
                     child: avatarImageFile == null
                         ? Text(
                             (_profileData?['username']?[0] ?? 'N/A')
                                 .toUpperCase(),
-                            style: const TextStyle(
-                                fontSize: 40, color: Colors.white),
+                            style: TextStyle(
+                              fontSize: 40,
+                              color: Colors.primaries[DateTime.now().second %
+                                  Colors.primaries.length],
+                            ),
                           )
                         : null,
                   ),
                 ),
               ],
             ),
-            // Text(
-            //   _profileData?['fullname'] ?? 'N/A',
-            //   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            // ),
+            const SizedBox(height: 10),
+            Text(
+              _profileData?['fullname'] ?? 'N/A',
+              style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue),
+            ),
             const Divider(
               color: Color.fromARGB(255, 141, 140, 140),
               thickness: 0.3,
               indent: 20,
               endIndent: 20,
             ),
-            _buildEditableProfileItem(fullnameController, 'Full Name'),
+            // _buildEditableProfileItem(fullnameController, 'Full Name'),
             _buildEditableProfileItem(usernameController, 'Username'),
             _buildEditableProfileItem(emailController, 'Email'),
             _buildEditableProfileItem(newpasswordController, 'Password'),
@@ -317,6 +329,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _buildEditableProfileItem(aioController, 'AIO Username'),
             _buildEditableProfileItem(aiokeyController, 'AIO Key'),
             _buildEditableProfileItem(wsvController, 'Web Server IP'),
+            const Divider(
+              color: Color.fromARGB(255, 141, 140, 140),
+              thickness: 0.3,
+              indent: 20,
+              endIndent: 20,
+            ),
+            _buildDeleteButton()
           ],
         ),
       ),
@@ -370,13 +389,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Future<void> _showPasswordDialog(BuildContext context) async {
+  Widget _buildDeleteButton() {
+    return Visibility(
+      visible: isEditing,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.red,
+          padding: const EdgeInsets.symmetric(
+              vertical: 12.0, horizontal: 30.0), // Adjusted padding for size
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8.0), // Rounded corners
+          ),
+        ),
+        onPressed: () {
+          if (isEditing) {
+            _showYesno(context);
+          } else {
+            setState(() {
+              isEditing = true; // Enable editing when Edit is pressed
+            });
+          }
+        },
+        child: const Text(
+          'Delete account',
+          style: TextStyle(color: Colors.white),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showYesno(BuildContext context) async {
     return showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Current password'),
+          title: const Text(
+            'Delete account',
+            style: TextStyle(color: Color.fromARGB(255, 255, 0, 0)),
+          ),
           content: TextField(
             controller: currentpasswordController,
             obscureText: true, // Ẩn mật khẩu
@@ -386,13 +437,76 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           actions: <Widget>[
             TextButton(
-              child: const Text('Cancel'),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Color.fromARGB(255, 0, 140, 255)),
+              ),
               onPressed: () {
                 Navigator.of(context).pop();
               },
             ),
             TextButton(
-              child: const Text('Save'),
+              child: const Text(
+                'Save',
+                style: TextStyle(color: Colors.green),
+              ),
+              onPressed: () {
+                if (currentpasswordController.text.trim().isNotEmpty) {
+                  _updateProfile(
+                    currentPassword: currentpasswordController.text
+                        .trim(), // Truyền mật khẩu hiện tại
+                  );
+                  setState(() {
+                    isEditing = false;
+                  });
+                  Navigator.of(context).pop();
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please enter your current password.'),
+                    ),
+                  );
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _showPasswordDialog(BuildContext context) async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text(
+            'Save changes',
+            style: TextStyle(color: Colors.blue),
+          ),
+          content: TextField(
+            controller: currentpasswordController,
+            obscureText: true, // Ẩn mật khẩu
+            decoration: const InputDecoration(
+              labelText: 'Current password',
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.red),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text(
+                'Save',
+                style: TextStyle(color: Colors.green),
+              ),
               onPressed: () {
                 if (currentpasswordController.text.trim().isNotEmpty) {
                   _updateProfile(

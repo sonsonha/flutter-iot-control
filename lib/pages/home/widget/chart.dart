@@ -17,6 +17,7 @@ class Chart extends StatefulWidget {
   String label = "Humidity";
 
   @override
+  // ignore: library_private_types_in_public_api
   _ChartState createState() => _ChartState();
 }
 
@@ -262,6 +263,7 @@ class _ChartState extends State<Chart> {
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                             colors: [
+                              // ignore: deprecated_member_use
                               Theme.of(context).primaryColor.withOpacity(0.5),
                               widget.label == 'Humidity'
                                   ? const Color.fromARGB(87, 1, 35, 255)

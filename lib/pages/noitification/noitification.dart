@@ -64,6 +64,7 @@ class noitification_setting extends StatelessWidget {
             padding: const EdgeInsets.all(8.0),
             decoration: BoxDecoration(
               color: const Color.fromARGB(0, 255, 255, 255)
+                  // ignore: deprecated_member_use
                   .withOpacity(0.8), // Màu nền cho box
               borderRadius: BorderRadius.circular(50), // Bo góc box
               boxShadow: const [

@@ -20,6 +20,7 @@ class Relay {
   }
 }
 
+// ignore: camel_case_types
 class toggle extends StatefulWidget {
   final double toggleHeight;
   final double toggleWidth;
@@ -33,6 +34,7 @@ class toggle extends StatefulWidget {
   });
 
   @override
+  // ignore: library_private_types_in_public_api
   _ToggleState createState() => _ToggleState();
 }
 

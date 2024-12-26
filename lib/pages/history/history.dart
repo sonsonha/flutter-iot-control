@@ -49,6 +49,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         List<Map<String, dynamic>> data =
             await fetchhistorydata(token, _startDate!, _endDate!);
         if (data.isEmpty) {
+          // ignore: use_build_context_synchronously
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
                 content: Text('No data found for the selected dates')),

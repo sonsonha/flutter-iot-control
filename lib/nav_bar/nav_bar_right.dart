@@ -39,13 +39,16 @@ int? _hoveredIndex;
 // List<Schedule> schedules = [];
 List<Schedule> todaySchedules = [];
 
+// ignore: camel_case_types
 class nabarright_set extends StatefulWidget {
   const nabarright_set({super.key});
 
   @override
+  // ignore: library_private_types_in_public_api
   _nabarright_setState createState() => _nabarright_setState();
 }
 
+// ignore: camel_case_types
 class _nabarright_setState extends State<nabarright_set> {
   @override
   void initState() {
@@ -90,7 +93,7 @@ class _nabarright_setState extends State<nabarright_set> {
           todaySchedules = fetchedSchedules;
         });
       } catch (e) {
-        print("Error parsing local schedules: $e");
+        logger.e("Error parsing local schedules: $e");
       }
     }
   }
@@ -124,12 +127,25 @@ class _nabarright_setState extends State<nabarright_set> {
               children: [
                 ClipOval(
                   child: profileData != null
-                      ? Image.asset(
-                          'assets/hcmut.png',
-                          width: 35,
-                          height: 35,
-                          fit: BoxFit.cover,
-                        )
+                      ? (profileData!['profileImage'] != null
+                          ? Image.memory(
+                              base64Decode(profileData!['profileImage']),
+                              width: 35,
+                              height: 35,
+                              fit: BoxFit.cover,
+                            )
+                          : CircleAvatar(
+                              backgroundColor: Colors.white,
+                              child: Text(
+                                profileData!['username'][0].toUpperCase(),
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  color: Colors.primaries[
+                                      DateTime.now().second %
+                                          Colors.primaries.length],
+                                ),
+                              ),
+                            ))
                       : const Icon(Icons.account_circle, size: 35),
                 ),
                 SizedBox(width: isRowLayout ? 8 : 0),
@@ -152,6 +168,7 @@ class _nabarright_setState extends State<nabarright_set> {
   }
 }
 
+// ignore: camel_case_types
 class Navbar_right extends StatelessWidget {
   const Navbar_right({super.key});
 
@@ -170,7 +187,7 @@ class Navbar_right extends StatelessWidget {
         children: [
           UserAccountsDrawerHeader(
             accountName: Text(
-              profileData?['username'] ?? 'Unknown User', // Display username
+              profileData?['username'] ?? 'N/A', // Display username
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
@@ -183,11 +200,14 @@ class Navbar_right extends StatelessWidget {
             currentAccountPicture: CircleAvatar(
               backgroundColor: Colors.white,
               child: profileData != null
-                  ? const ClipOval(
-                      child: Icon(
-                        Icons.account_circle,
-                        size: 50,
-                        color: Colors.grey,
+                  ? ClipOval(
+                      child: Text(
+                        profileData!['username'][0].toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 40,
+                          color: Colors.primaries[
+                              DateTime.now().second % Colors.primaries.length],
+                        ),
                       ),
                     )
                   : const Icon(
@@ -284,6 +304,7 @@ Card _buildScheduleCard(int index, double width) {
               color: [
                 const Color.fromARGB(255, 19, 76, 130),
                 const Color(0xFF5FC6FF)
+                // ignore: deprecated_member_use
               ].last.withOpacity(0.4),
               blurRadius: 8,
               spreadRadius: 2,

@@ -8,6 +8,8 @@ import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:numberpicker/numberpicker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../home/home.dart';
 // import 'dart:math' as math;
 
 class Relay {
@@ -72,6 +74,7 @@ class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});
 
   @override
+  // ignore: library_private_types_in_public_api
   _ScheduleScreenState createState() => _ScheduleScreenState();
 }
 
@@ -197,19 +200,19 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             _isSelected = List.generate(schedules.length, (_) => false);
           });
 
-          print("Success to fetch schedules");
+          logger.i("Success to fetch schedules");
         } else {
           setState(() {
             schedules = [];
             _isSelected = [];
           });
-          print("Unexpected response format: ${response.body}");
+          logger.w("Unexpected response format: ${response.body}");
         }
       } else {
-        print("Failed to fetch schedules: ${response.body}");
+        logger.e("Failed to fetch schedules: ${response.body}");
       }
     } catch (e) {
-      print("Error occurred: $e");
+      logger.e("Error occurred: $e");
     }
   }
 
@@ -228,9 +231,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         _isSelected = List.generate(schedules.length, (_) => false);
       });
 
-      print("Schedules loaded from SharedPreferences");
+      logger.i("Schedules loaded from SharedPreferences");
     } else {
-      print("No schedules found in SharedPreferences.");
+      logger.w("No schedules found in SharedPreferences.");
       fetchSchedulesAPI(); // Fallback to API if no cached data
     }
   }
@@ -263,13 +266,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       );
 
       if (response.statusCode == 200) {
-        print("Schedule added successfully");
+        logger.i("Schedule added successfully");
         await fetchSchedulesAPI(); // Fetch updated schedules after adding
       } else {
-        print("Failed to add schedule: ${response.body}");
+        logger.w("Failed to add schedule: ${response.body}");
       }
     } catch (e) {
-      print("Error adding schedule: $e");
+      logger.e("Error adding schedule: $e");
     }
   }
 
@@ -325,6 +328,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     }
 
     showDialog(
+      // ignore: use_build_context_synchronously
       context: context,
       builder: (context) {
         return StatefulBuilder(
@@ -663,7 +667,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
             await editScheduleAPI(schedules[indexScheduleEdit].id, relayName,
                 selectedDaysList, timeString, action);
+            // ignore: use_build_context_synchronously
             Navigator.of(context).pop();
+            // ignore: use_build_context_synchronously
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text("Schedule is edited")),
             );
@@ -748,13 +754,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             relays = []; // Set relays to an empty list
             _isSelected = [];
           });
-          print("Unexpected response format: ${response.body}");
+          logger.w("Unexpected response format: ${response.body}");
         }
       } else {
-        print("Failed to fetch relays: ${response.body}");
+        logger.w("Failed to fetch relays: ${response.body}");
       }
     } catch (e) {
-      print("Error occurred: $e");
+      logger.e("Error occurred: $e");
     }
   }
 
@@ -768,6 +774,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     await fetchRelaysAPI();
 
     showDialog(
+      // ignore: use_build_context_synchronously
       context: context,
       builder: (context) {
         return StatefulBuilder(
@@ -1040,7 +1047,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 .toList();
 
             await _addScheduleAPI(relayName, selectedDaysList, action);
+            // ignore: use_build_context_synchronously
             Navigator.of(context).pop();
+            // ignore: use_build_context_synchronously
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text("$relayName is relay added")),
             );
@@ -1120,15 +1129,15 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       );
 
       if (response.statusCode == 200) {
-        print("Schedule $scheduleId is ${state ? 'ON' : 'OFF'}");
+        logger.i("Schedule $scheduleId is ${state ? 'ON' : 'OFF'}");
 
         // Fetch updated schedule from the server after changing the schedule status
         await fetchSchedulesAPI();
       } else {
-        print("Failed to change schedule state: ${response.body}");
+        logger.w("Failed to change schedule state: ${response.body}");
       }
     } catch (e) {
-      print("Error occurred: $e");
+      logger.e("Error occurred: $e");
     }
   }
 
@@ -1161,14 +1170,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       );
 
       if (response.statusCode == 200) {
-        print("Schedule updated successfully");
+        logger.i("Schedule updated successfully");
         await fetchSchedulesAPI();
       } else {
         // Handle specific errors based on response
-        print("Failed to update Schedule: ${response.body}");
+        logger.w("Failed to update Schedule: ${response.body}");
       }
     } catch (e) {
-      print("Error occurred: $e");
+      logger.e("Error occurred: $e");
     }
   }
 
@@ -1192,13 +1201,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       );
 
       if (response.statusCode == 200) {
-        print("SChedule deleted successfully");
+        logger.i("SChedule deleted successfully");
         await fetchSchedulesAPI(); // Refresh the list after deletion
       } else {
-        print("Failed to delete schedule: ${response.body}");
+        logger.w("Failed to delete schedule: ${response.body}");
       }
     } catch (e) {
-      print("Error occurred: $e");
+      logger.e("Error occurred: $e");
     }
   }
 
@@ -1214,6 +1223,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               onPressed: () async {
                 String scheduleId = schedules[index].id;
                 await deleteScheduleAPI(scheduleId); // Call the API to delete
+                // ignore: use_build_context_synchronously
                 Navigator.of(context).pop();
               },
               style: ElevatedButton.styleFrom(
@@ -1443,6 +1453,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                         color: [
                           const Color.fromARGB(255, 19, 76, 130),
                           const Color(0xFF5FC6FF)
+                        // ignore: deprecated_member_use
                         ].last.withOpacity(0.4),
                         blurRadius: 8,
                         spreadRadius: 2,

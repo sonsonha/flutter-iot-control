@@ -55,6 +55,7 @@ Future<String?> fetchSignIn(TextEditingController emailController,
           'schedules_home', json.encode(jsonData['schedules_home']));
       await prefs.setString('profile', json.encode(jsonData['profile']));
 
+      // ignore: use_build_context_synchronously
       Navigator.pushReplacementNamed(context, '/home');
       return null;
     } else {
