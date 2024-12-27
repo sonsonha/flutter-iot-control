@@ -185,15 +185,17 @@ Future<String> fetchSendcode(String email) async {
     );
     if (response.statusCode == 200) {
       logger.i("Successful code submission");
-      // print('Response body: ${response.body}');
-      return 'Successful code submission';
+      final Map<String, dynamic> responseData = json.decode(response.body);
+      if (responseData.containsKey('code')) {
+        return responseData['code'];
+      }
     } else {
       logger.e("Failed to send verification code");
-      return 'Failed to send verification code';
     }
+    return "";
   } catch (error) {
     logger.e("Error: $error");
-    return 'Error: $error';
+    return "";
   }
 }
 

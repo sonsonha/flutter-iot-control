@@ -64,7 +64,8 @@ class _RelayScreenState extends State<RelayScreen> {
 
   void fetchInitialData() async {
     // Fetch all relays
-    await fetchRelaysAPI();
+    // await fetchRelaysAPI();
+    loadrelaysFromPrefs();
 
     List<String> homeRelayIds = await fetchHomeRelays();
 
@@ -79,6 +80,32 @@ class _RelayScreenState extends State<RelayScreen> {
       homeRelays =
           relays.where((relay) => homeRelayIds.contains(relay.id)).toList();
     });
+  }
+
+  Future<void> loadrelaysFromPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? relaysJson = prefs.getString('relays');
+
+    if (relaysJson != null) {
+      // List<dynamic> decoded = json.decode(schedulesJson);
+
+      setState(() {
+        List<dynamic> decoded = json.decode(relaysJson);
+        relays = decoded.map<Relay>((relay) {
+          return Relay(
+            id: relay['relay_id'].toString(),
+            name: relay['relay_name'],
+            isOn: relay['state'],
+          );
+        }).toList();
+        _isSelected = List.generate(relays.length, (_) => false);
+      });
+
+      logger.i("Relays loaded from SharedPreferences");
+    } else {
+      logger.w("No Relays found in SharedPreferences.");
+      fetchRelaysAPI(); // Fallback to API if no cached data
+    }
   }
 
   Future<List<String>> fetchHomeRelays() async {
@@ -217,6 +244,7 @@ class _RelayScreenState extends State<RelayScreen> {
     var token = prefs.getString('accessToken')!;
     final baseUrl = dotenv.env['API_BASE_URL']!;
     final url = Uri.parse('http://$baseUrl/relay/add');
+
     try {
       Map<String, dynamic> requestBody = {
         'relay_id': relayId,
@@ -227,7 +255,7 @@ class _RelayScreenState extends State<RelayScreen> {
         url,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token'
+          'Authorization': 'Bearer $token',
         },
         body: jsonEncode(requestBody),
       );
@@ -235,8 +263,32 @@ class _RelayScreenState extends State<RelayScreen> {
       if (response.statusCode == 200) {
         logger.i("Relay added successfully");
 
-        // Fetch updated relays from the server after adding the new relay
-        await fetchRelaysAPI();
+        // Đọc danh sách relays hiện tại từ SharedPreferences
+        String? relaysJson = prefs.getString('relays');
+        List<dynamic> relaysData =
+            relaysJson != null ? jsonDecode(relaysJson) : [];
+
+        // Thêm relay mới vào danh sách
+        Map<String, dynamic> newRelay = {
+          'relay_id': relayId,
+          'relay_name': relayName,
+          'state': false, // Mặc định trạng thái relay mới là tắt
+        };
+        relaysData.add(newRelay);
+
+        // Lưu lại danh sách đã cập nhật vào SharedPreferences
+        await prefs.setString('relays', jsonEncode(relaysData));
+
+        // Cập nhật UI ngay lập tức
+        setState(() {
+          relays = relaysData.map<Relay>((relay) {
+            return Relay(
+              id: relay['relay_id'].toString(),
+              name: relay['relay_name'],
+              isOn: relay['state'],
+            );
+          }).toList();
+        });
       } else {
         logger.w("Failed to add relay: ${response.body}");
       }
@@ -252,27 +304,54 @@ class _RelayScreenState extends State<RelayScreen> {
     final url = Uri.parse('http://$baseUrl/relay/set-status');
     try {
       Map<String, dynamic> requestBody = {
-        'relayId': relayId, // Adjusted to match Node.js API
-        'state': state, // Adjusted to match Node.js API
+        'relayId': relayId,
+        'state': state,
       };
 
       var response = await http.patch(
         url,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token'
+          'Authorization': 'Bearer $token',
         },
         body: jsonEncode(requestBody),
       );
 
       if (response.statusCode == 200) {
-        await fetchHomeRelays();
+        List<String> homeRelayIds = await fetchHomeRelays();
+
+        String? relaysJson = prefs.getString('relays');
+        if (relaysJson != null) {
+          List<dynamic> relaysData = jsonDecode(relaysJson);
+
+          // Tìm và cập nhật trạng thái relay
+          for (var relay in relaysData) {
+            if (relay['relay_id'].toString().trim() == relayId.trim()) {
+              relay['state'] = state;
+              break;
+            }
+          }
+
+          // Lưu lại danh sách relay đã cập nhật
+          await prefs.setString('relays', jsonEncode(relaysData));
+
+          // Cập nhật danh sách relays và giao diện
+          setState(() {
+            relays = relaysData.map<Relay>((relay) {
+              return Relay(
+                id: relay['relay_id'].toString(),
+                name: relay['relay_name'],
+                isOn: relay['state'],
+              );
+            }).toList();
+
+            homeRelays = relays
+                .where((relay) => homeRelayIds.contains(relay.id))
+                .toList();
+          });
+        }
 
         logger.i("Relay $relayId is ${state ? 'ON' : 'OFF'}");
-        // prefs.setString('relay_$relayId', state.toString());
-        // isTurnOn = state;
-        // Fetch updated relays from the server after changing the relay status
-        // await fetchRelaysAPI();
       } else {
         logger.w("Failed to change relay state: ${response.body}");
       }
@@ -287,28 +366,55 @@ class _RelayScreenState extends State<RelayScreen> {
     var token = prefs.getString('accessToken')!;
     final baseUrl = dotenv.env['API_BASE_URL']!;
     final url = Uri.parse('http://$baseUrl/relay/set');
+
     try {
       Map<String, dynamic> requestBody = {
         'relay_id': oldRelayId,
-        'relay_name': relayName,
-        'new_relay_id': newRelayId,
+        'relay_name': relayName, // Tên relay mới
+        'new_relay_id': newRelayId, // ID relay mới
       };
 
       final response = await http.patch(
         url,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization':
-              'Bearer $token', // Make sure you have this set up correctly
+          'Authorization': 'Bearer $token',
         },
         body: jsonEncode(requestBody),
       );
 
       if (response.statusCode == 200) {
         logger.i("Relay updated successfully");
-        await fetchRelaysAPI();
+
+        // Đọc danh sách hiện tại từ SharedPreferences
+        String? relaysJson = prefs.getString('relays');
+        if (relaysJson != null) {
+          List<dynamic> relaysData = jsonDecode(relaysJson);
+
+          // Tìm và cập nhật cả relay_id và relay_name
+          for (var relay in relaysData) {
+            if (relay['relay_id'].toString().trim() == oldRelayId.trim()) {
+              relay['relay_id'] = newRelayId;
+              relay['relay_name'] = relayName; // Cập nhật tên relay mới
+              break;
+            }
+          }
+
+          // Lưu lại danh sách đã cập nhật vào SharedPreferences
+          await prefs.setString('relays', jsonEncode(relaysData));
+
+          // Cập nhật giao diện
+          setState(() {
+            relays = relaysData.map<Relay>((relay) {
+              return Relay(
+                id: relay['relay_id'].toString(),
+                name: relay['relay_name'], // Gán tên mới
+                isOn: relay['state'],
+              );
+            }).toList();
+          });
+        }
       } else {
-        // Handle specific errors based on response
         logger.w("Failed to update relay: ${response.body}");
       }
     } catch (e) {
@@ -321,6 +427,7 @@ class _RelayScreenState extends State<RelayScreen> {
     var token = prefs.getString('accessToken')!;
     final baseUrl = dotenv.env['API_BASE_URL']!;
     final url = Uri.parse('http://$baseUrl/relay/delete');
+
     try {
       Map<String, dynamic> requestBody = {
         'relayId': relayId,
@@ -336,10 +443,30 @@ class _RelayScreenState extends State<RelayScreen> {
       );
 
       if (response.statusCode == 200) {
-        // logger.i("Relay deleted successfully");
-        if (mounted) {
-          await fetchRelaysAPI(); // Refresh the list after deletion
-          await fetchHomeRelays();
+        logger.i("Relay deleted successfully");
+
+        // Đọc danh sách relays hiện tại từ SharedPreferences
+        String? relaysJson = prefs.getString('relays');
+        if (relaysJson != null) {
+          List<dynamic> relaysData = jsonDecode(relaysJson);
+
+          // Xóa relay khỏi danh sách
+          relaysData.removeWhere(
+              (relay) => relay['relay_id'].toString().trim() == relayId.trim());
+
+          // Lưu danh sách đã cập nhật vào SharedPreferences
+          await prefs.setString('relays', jsonEncode(relaysData));
+
+          // Cập nhật giao diện
+          setState(() {
+            relays = relaysData.map<Relay>((relay) {
+              return Relay(
+                id: relay['relay_id'].toString(),
+                name: relay['relay_name'],
+                isOn: relay['state'],
+              );
+            }).toList();
+          });
         }
       } else {
         logger.w("Failed to delete relay: ${response.body}");
@@ -413,6 +540,7 @@ class _RelayScreenState extends State<RelayScreen> {
                           : 'Relay-$relayId';
 
                       await addRelayAPI(relayId, relayName);
+                      loadrelaysFromPrefs();
                       // ignore: use_build_context_synchronously
                       Navigator.of(context).pop();
                     }
@@ -517,13 +645,22 @@ class _RelayScreenState extends State<RelayScreen> {
         selectedRelaysDelete.add(relays[i]);
       }
     }
+
     int numDeletedRelay = 0;
+
+    // Xóa từng relay
     for (var relay in selectedRelaysDelete) {
       String relayId = relay.id;
+
+      // Xóa relay qua API và SharedPreferences
       await deleteRelayAPI(relayId);
-      // selectedRelaysDelete.remove(relay);
       numDeletedRelay++;
     }
+
+    // Đồng bộ lại danh sách từ SharedPreferences sau khi xóa
+    await loadrelaysFromPrefs();
+
+    // Hiển thị thông báo kết quả
     if (numDeletedRelay <= 1) {
       // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
@@ -613,9 +750,11 @@ class _RelayScreenState extends State<RelayScreen> {
   }
 
   void _editRelay(int index) {
-    // Reset controllers before showing the dialog
-    _idController.clear();
-    _nameController.clear();
+    // Gán giá trị ban đầu vào controllers
+    _idController.text = relays[index].id;
+    _nameController.text = relays[index].name;
+    _errorMessage = ''; // Reset error message
+    _idError = false; // Reset error state
 
     showDialog(
       context: context,
@@ -651,47 +790,54 @@ class _RelayScreenState extends State<RelayScreen> {
                     String newRelayId = _idController.text.trim();
                     String newRelayName = _nameController.text.trim();
 
-                    // If both fields are empty, show error
+                    // Kiểm tra dữ liệu đầu vào
                     if (newRelayId.isEmpty && newRelayName.isEmpty) {
                       setState(() {
                         _idError = true;
                         _errorMessage = 'Please enter changes!';
                       });
-                      return; // Exit early if no changes are made
+                      return;
                     }
 
-                    // Check if the entered ID already exists
+                    // Kiểm tra trùng ID
                     if (newRelayId.isNotEmpty &&
-                        relays.any((relay) => relay.id == newRelayId)) {
+                        relays.any((relay) =>
+                            relay.id == newRelayId &&
+                            relay.id != relays[index].id)) {
                       setState(() {
                         _idError = true;
                         _errorMessage = 'Relay ID already exists!';
                       });
-                      return; // Exit if duplicate ID
+                      return;
                     }
 
-                    // If Name field is empty, keep the old name
-                    if (newRelayName.isEmpty) {
-                      newRelayName = relays[index].name;
-                    }
+                    // Gán giá trị mới (hoặc giữ giá trị cũ nếu không thay đổi)
+                    newRelayId =
+                        newRelayId.isNotEmpty ? newRelayId : relays[index].id;
+                    newRelayName = newRelayName.isNotEmpty
+                        ? newRelayName
+                        : relays[index].name;
+
                     logger.i(
                         "Editing relay: ID: $newRelayId, Name: $newRelayName");
 
-                    // Perform async API call to edit the relay
+                    // Gọi API chỉnh sửa
                     await editRelayAPI(
-                      relays[index].id, // Old relay ID (current one)
-                      newRelayName, // New relay name or old if unchanged
-                      newRelayId, // New relay ID or old if unchanged
+                      relays[index].id, // ID hiện tại
+                      newRelayName, // Tên mới
+                      newRelayId, // ID mới
                     );
 
-                    // Always refresh the list from the server to avoid inconsistencies
-                    await fetchRelaysAPI();
+                    // Cập nhật giao diện
+                    await loadrelaysFromPrefs();
 
+                    // Đóng hộp thoại
                     // ignore: use_build_context_synchronously
                     Navigator.of(context).pop();
                   },
                   style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent),
+                    backgroundColor: Colors.blueAccent,
+                  ),
                   child: const Text('Update'),
                 ),
                 ElevatedButton(
@@ -947,7 +1093,7 @@ class _RelayScreenState extends State<RelayScreen> {
                         color: [
                           const Color.fromARGB(255, 19, 76, 130),
                           const Color(0xFF5FC6FF)
-                        // ignore: deprecated_member_use
+                          // ignore: deprecated_member_use
                         ].last.withOpacity(0.4),
                         blurRadius: 8,
                         spreadRadius: 2,

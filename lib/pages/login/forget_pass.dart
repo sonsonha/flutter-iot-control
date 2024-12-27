@@ -21,6 +21,7 @@ class _ForgetState extends State<Forget> {
   bool isLoading = false;
   bool _isVerificationCodeVisible = false;
   bool _passwordVisible = false;
+  String myCodeResult = "";
 
   String? _errorMessage;
 
@@ -66,15 +67,14 @@ class _ForgetState extends State<Forget> {
       });
       return;
     }
+    setState(() {
+      isLoading = true;
+    });
 
-    String? confirmCodeResult = await fetchConfirmcode(
-      _emailController.text,
-      _code.text,
-    );
-
-    if (confirmCodeResult != "Success verification code") {
+    if (_code.text != myCodeResult) {
       setState(() {
-        _errorMessage = confirmCodeResult;
+        _errorMessage = "Wrong confirm code";
+        isLoading = false;
       });
       return;
     }
@@ -95,6 +95,10 @@ class _ForgetState extends State<Forget> {
         _errorMessage = null;
       });
     }
+    setState(() {
+      isLoading = false;
+    });
+    myCodeResult = "";
   }
 
   void _handleSignInClick(BuildContext context) {
@@ -119,15 +123,17 @@ class _ForgetState extends State<Forget> {
 
     String? sendCodeResult = await fetchSendcode(_emailController.text);
 
-    if (sendCodeResult == "Successful code submission") {
+    if (sendCodeResult.isNotEmpty) {
       setState(() {
         _isVerificationCodeVisible = true;
-        _errorMessage = null; // Reset lỗi sau khi thành công
+        _errorMessage = null;
       });
+      myCodeResult = sendCodeResult;
     } else {
       setState(() {
-        _errorMessage = sendCodeResult;
+        _errorMessage = "Fail to send code to your mail";
       });
+      myCodeResult = "";
     }
     setState(() {
       isLoading = false;
@@ -439,14 +445,23 @@ class _ForgetState extends State<Forget> {
           ),
           child: Container(
             alignment: Alignment.center,
-            child: const Text(
-              'Change password',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
+            child: isLoading
+                ? const Center(
+                    child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                    ),
+                  ))
+                : const Text(
+                    'Change password',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
           ),
         ),
       ),

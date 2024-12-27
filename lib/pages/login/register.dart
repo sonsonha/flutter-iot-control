@@ -28,6 +28,7 @@ class _RegisterState extends State<Register> {
   bool _passwordVisible = false;
   bool isLoading = false;
   String? _errorMessage;
+  String myCodeResult = "";
 
   // Timer-related variables
   Timer? _timer;
@@ -58,20 +59,17 @@ class _RegisterState extends State<Register> {
   }
 
   Future<void> _handleOnClick(BuildContext context) async {
-   
     if (_emailController.text.isNotEmpty && _code.text.isNotEmpty) {
-      String? confirmCodeResult = await fetchConfirmcode(
-        _emailController.text,
-        _code.text,
-      );
-
-      if (confirmCodeResult != "Success verification code") {
+      if (_code.text != myCodeResult) {
         setState(() {
           _errorMessage = "Wrong code verification";
+          isLoading = false;
         });
         return;
       }
-
+      setState(() {
+        isLoading = true;
+      });
       String? registerResult = await fetchRegister(
         _fullname,
         _username,
@@ -93,11 +91,15 @@ class _RegisterState extends State<Register> {
           _errorMessage = null;
         });
       }
+      setState(() {
+        isLoading = false;
+      });
     } else {
       setState(() {
         _errorMessage = "Not enough information!";
       });
     }
+    myCodeResult = "";
   }
 
   void _handleSignInClick(BuildContext context) {
@@ -117,16 +119,18 @@ class _RegisterState extends State<Register> {
     }
 
     String? sendCodeResult = await fetchSendcode(_emailController.text);
-     
-    if (sendCodeResult == "Successful code submission") {
+
+    if (sendCodeResult.isNotEmpty) {
       setState(() {
         _isVerificationCodeVisible = true;
         _errorMessage = null;
       });
+      myCodeResult = sendCodeResult;
     } else {
       setState(() {
         _errorMessage = sendCodeResult;
       });
+      myCodeResult = "";
     }
     setState(() {
       isLoading = false;
@@ -415,7 +419,6 @@ class _RegisterState extends State<Register> {
           });
           _sendcode();
           startTimer();
-
         },
         child: Ink(
           decoration: BoxDecoration(
@@ -478,14 +481,23 @@ class _RegisterState extends State<Register> {
           ),
           child: Container(
             alignment: Alignment.center,
-            child: const Text(
-              'Confirm',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
+            child: isLoading
+                ? const Center(
+                    child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                    ),
+                  ))
+                : const Text(
+                    'Confirm',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
           ),
         ),
       ),

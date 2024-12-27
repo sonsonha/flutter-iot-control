@@ -1,6 +1,5 @@
 // import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:frontend_daktmt/custom_card.dart';
 import 'package:frontend_daktmt/nav_bar/nav_bar_left.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:http/http.dart' as http;
@@ -8,8 +7,6 @@ import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:numberpicker/numberpicker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import '../home/home.dart';
 // import 'dart:math' as math;
 
 class Relay {
@@ -74,13 +71,13 @@ class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});
 
   @override
-  // ignore: library_private_types_in_public_api
   _ScheduleScreenState createState() => _ScheduleScreenState();
 }
 
 class _ScheduleScreenState extends State<ScheduleScreen> {
   // final bool _isHovered = false; // To detect hover
   final bool _isTapped = false; // To detect tap (for mobile)
+  bool flatToggleSelect = false;
   int? _hoveredIndex;
   final TextEditingController _nameController = TextEditingController();
   final List<String> _days = [
@@ -102,7 +99,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   bool _showDeleteIcon = false;
   bool _showEditIcon = false;
-  bool _selectMode = false;
+  // final bool _selectMode = false;
   List<bool> _isSelected = []; // Schedules is selected
   List<bool> _isSelectedRelays =
       []; // Check whether the relay is checked or not bruh
@@ -133,46 +130,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     );
   }
 
-  // Future<void> fetchSchedulesAPI() async {
-  //   final prefs = await SharedPreferences.getInstance();
-  //   var token = prefs.getString('accessToken')!;
-  //   final baseUrl = dotenv.env['API_BASE_URL']!;
-  //   final url = Uri.parse('http://$baseUrl/schedule/get');
-  //   try {
-  //     final response = await http.get(url, headers: {
-  //       'Authorization': 'Bearer $token',
-  //     });
-
-  //     if (response.statusCode == 200) {
-  //       final responseData = json.decode(response.body);
-
-  //       if (responseData is List) {
-  //         List<Schedule> fetchedSchedules = responseData
-  //             .map<Schedule>((scheduleJson) => Schedule.fromJson(scheduleJson))
-  //             .toList();
-
-  //         await prefs.setString('schedules', json.encode(responseData));
-
-  //         setState(() {
-  //           schedules = fetchedSchedules;
-  //           _isSelected = List.generate(schedules.length, (_) => false);
-  //         });
-  //         print("Success to fetch schedules");
-  //       } else {
-  //         setState(() {
-  //           relays = [];
-  //           _isSelected = [];
-  //         });
-  //         print("Unexpected response format: ${response.body}");
-  //       }
-  //     } else {
-  //       print("Failed to fetch relays: ${response.body}");
-  //     }
-  //   } catch (e) {
-  //     print("Error occurred: $e");
-  //   }
-  // }
-
   Future<void> fetchSchedulesAPI() async {
     final prefs = await SharedPreferences.getInstance();
     var token = prefs.getString('accessToken')!;
@@ -200,19 +157,19 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             _isSelected = List.generate(schedules.length, (_) => false);
           });
 
-          logger.i("Success to fetch schedules");
+          print("Success to fetch schedules");
         } else {
           setState(() {
             schedules = [];
             _isSelected = [];
           });
-          logger.w("Unexpected response format: ${response.body}");
+          print("Unexpected response format: ${response.body}");
         }
       } else {
-        logger.e("Failed to fetch schedules: ${response.body}");
+        print("Failed to fetch schedules: ${response.body}");
       }
     } catch (e) {
-      logger.e("Error occurred: $e");
+      print("Error occurred: $e");
     }
   }
 
@@ -231,9 +188,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         _isSelected = List.generate(schedules.length, (_) => false);
       });
 
-      logger.i("Schedules loaded from SharedPreferences");
+      print("Schedules loaded from SharedPreferences");
     } else {
-      logger.w("No schedules found in SharedPreferences.");
+      print("No schedules found in SharedPreferences.");
       fetchSchedulesAPI(); // Fallback to API if no cached data
     }
   }
@@ -266,13 +223,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       );
 
       if (response.statusCode == 200) {
-        logger.i("Schedule added successfully");
+        print("Schedule added successfully");
         await fetchSchedulesAPI(); // Fetch updated schedules after adding
       } else {
-        logger.w("Failed to add schedule: ${response.body}");
+        print("Failed to add schedule: ${response.body}");
       }
     } catch (e) {
-      logger.e("Error adding schedule: $e");
+      print("Error adding schedule: $e");
     }
   }
 
@@ -313,7 +270,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
     // Set time
     selectedTime = parseTimeString(schedules[index].time);
-
     for (int i = 0; i < relays.length; i++) {
       Action? relayAction = schedules[index].actions.firstWhere(
             (action) => action.relayId == int.tryParse(relays[i].id),
@@ -326,9 +282,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           .actions
           .any((action) => action.relayId == int.tryParse(relays[i].id));
     }
-
     showDialog(
-      // ignore: use_build_context_synchronously
       context: context,
       builder: (context) {
         return StatefulBuilder(
@@ -554,24 +508,42 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   Widget _buildNewRelaysSelection(StateSetter setState) {
+    if (relays.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Text(
+            "Relays are not available.",
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey,
+              fontStyle: FontStyle.italic,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
           "Select desired relay states:",
           style: TextStyle(
-            fontSize: 15, // Set the font size
-            fontWeight: FontWeight.w600, // Semi-bold font weight
-            color: Color.fromARGB(255, 80, 73, 73), // Text color
-            letterSpacing: 1.2, // Letter spacing for readability
-            fontFamily: 'avenir', // Use a custom font family (optional)
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: Color.fromARGB(255, 80, 73, 73),
+            letterSpacing: 1.2,
+            fontFamily: 'avenir',
           ),
         ),
+        const SizedBox(height: 8),
         ...relays.asMap().entries.map((entry) {
           int index = entry.key;
           var relay = entry.value;
 
-          // Define the background color based on relay selection
           Color backgroundColor = _isSelectedRelays[index]
               ? const Color.fromARGB(255, 5, 74, 131)
               : const Color.fromARGB(255, 207, 202, 202);
@@ -580,42 +552,37 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             padding: const EdgeInsets.symmetric(
               vertical: 6.0,
               horizontal: 8.0,
-            ), // Add vertical and horizontal padding
+            ),
             child: GestureDetector(
               onTap: () {
                 setState(() {
-                  // Toggle selection state when the entire item is tapped
                   _isSelectedRelays[index] = !_isSelectedRelays[index];
                 });
               },
               child: Container(
                 decoration: BoxDecoration(
-                  color: backgroundColor, // Set background color dynamically
-                  borderRadius: BorderRadius.circular(12), // Rounded corners
+                  color: backgroundColor,
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 10.0,
-                  ), // Padding inside the ListTile
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 10.0),
                   title: Text(
                     relay.name,
                     style: const TextStyle(
-                      fontSize: 15, // Set the font size
-                      fontWeight: FontWeight.w600, // Semi-bold font weight
-                      color: Color.fromARGB(255, 251, 251, 251), // Text color
-                      letterSpacing: 1.2, // Letter spacing for readability
-                      fontFamily:
-                          'avenir', // Use a custom font family (optional)
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Color.fromARGB(255, 251, 251, 251),
+                      letterSpacing: 1.2,
+                      fontFamily: 'avenir',
                     ),
                   ),
                   trailing: Switch(
                     value: relay.isSetChedule,
-                    activeTrackColor: Colors
-                        .blue, // Custom color for the active track (background)
-                    inactiveThumbColor: const Color.fromARGB(255, 222, 213,
-                        213), // Custom color for the "off" thumb (circle)
-                    inactiveTrackColor: const Color.fromARGB(255, 235, 232,
-                        232), // Custom color for the "off" track (background)
+                    activeTrackColor: Colors.blue,
+                    inactiveThumbColor:
+                        const Color.fromARGB(255, 222, 213, 213),
+                    inactiveTrackColor:
+                        const Color.fromARGB(255, 235, 232, 232),
                     onChanged: (bool value) {
                       setState(() {
                         relay.isSetChedule = value;
@@ -667,16 +634,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
             await editScheduleAPI(schedules[indexScheduleEdit].id, relayName,
                 selectedDaysList, timeString, action);
-            // ignore: use_build_context_synchronously
             Navigator.of(context).pop();
-            // ignore: use_build_context_synchronously
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text("Schedule is edited")),
             );
           }
         },
         style: ElevatedButton.styleFrom(
-            backgroundColor: const Color.fromARGB(255, 93, 128, 187),
+            backgroundColor: const Color.fromARGB(255, 14, 83, 202),
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
         child: const Text(
@@ -723,44 +688,69 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   Future<void> fetchRelaysAPI() async {
     final prefs = await SharedPreferences.getInstance();
-    var token = prefs.getString('accessToken')!;
-    final baseUrl = dotenv.env['API_BASE_URL']!;
+    var token = prefs.getString('accessToken');
+    if (token == null) {
+      print("Error: Access token not found.");
+      return;
+    }
+
+    final baseUrl = dotenv.env['API_BASE_URL'];
+    if (baseUrl == null) {
+      print("Error: API_BASE_URL not set in environment.");
+      return;
+    }
+
     final url = Uri.parse('http://$baseUrl/relay/get');
+
     try {
-      var response = await http.get(url, headers: {
-        'Authorization': 'Bearer $token', // Update with your token
-      });
+      var response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
 
       if (response.statusCode == 200) {
         var responseData = json.decode(response.body);
 
-        // Check if responseData is a list, otherwise handle empty or unexpected response
-        if (responseData is List<dynamic>) {
+        // Check if responseData is a list
+        if (responseData is List<dynamic> && responseData.isNotEmpty) {
           List<Relay> fetchedRelays = responseData.map((relay) {
             return Relay(
-              id: relay['relay_id'].toString(), // Use 'relay_id'
+              id: relay['relay_id'].toString(),
               name: relay['relay_name'],
-              isOn: relay['state'], // Use 'state' for relay status
+              isOn: relay['state'],
             );
           }).toList();
 
           setState(() {
-            relays = fetchedRelays; // Update UI with fetched relays
-            _isSelectedRelays = List.generate(relays.length, (index) => false);
+            relays = fetchedRelays;
+            _isSelectedRelays = List.generate(
+                relays.length, (index) => false); // Update selection
           });
         } else {
-          // If it's not a list, handle it accordingly (e.g., no data)
+          // Handle empty or unexpected response
           setState(() {
-            relays = []; // Set relays to an empty list
-            _isSelected = [];
+            relays = [];
+            _isSelectedRelays = [];
           });
-          logger.w("Unexpected response format: ${response.body}");
+          print("No relays available or unexpected response: ${response.body}");
         }
       } else {
-        logger.w("Failed to fetch relays: ${response.body}");
+        // Handle non-200 responses
+        print("Failed to fetch relays: ${response.body}");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text("Error fetching relays: ${response.statusCode}")),
+        );
       }
     } catch (e) {
-      logger.e("Error occurred: $e");
+      // Handle network or JSON decoding errors
+      print("Error occurred: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text("An error occurred while fetching relays.")),
+      );
     }
   }
 
@@ -774,7 +764,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     await fetchRelaysAPI();
 
     showDialog(
-      // ignore: use_build_context_synchronously
       context: context,
       builder: (context) {
         return StatefulBuilder(
@@ -974,39 +963,130 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   Widget _buildRelaysSelection(StateSetter setState) {
+    if (relays.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Text(
+            "Relays are not available.",
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey,
+              fontStyle: FontStyle.italic,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("Select Relays:"),
+        const Text(
+          "Select desired relay states:",
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: Color.fromARGB(255, 80, 73, 73),
+            letterSpacing: 1.2,
+            fontFamily: 'avenir',
+          ),
+        ),
+        const SizedBox(height: 8),
         ...relays.asMap().entries.map((entry) {
           int index = entry.key;
           var relay = entry.value;
-          return ListTile(
-            leading: Checkbox(
-              value: _isSelectedRelays[index],
-              onChanged: (value) {
-                setState(() {
-                  _isSelectedRelays[index] = value!;
-                });
-              },
+
+          Color backgroundColor = _isSelectedRelays[index]
+              ? const Color.fromARGB(255, 5, 74, 131)
+              : const Color.fromARGB(255, 207, 202, 202);
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: 6.0,
+              horizontal: 8.0,
             ),
-            title: Text(relay.name),
-            subtitle:
-                Text("Current state: ${relay.isSetChedule ? "ON" : "OFF"}"),
-            trailing: Switch(
-              value: relays[index].isSetChedule,
-              activeColor: Colors.green,
-              onChanged: (bool value) async {
+            child: GestureDetector(
+              onTap: () {
                 setState(() {
-                  relays[index].isSetChedule = value;
+                  _isSelectedRelays[index] = !_isSelectedRelays[index];
                 });
               },
+              child: Container(
+                decoration: BoxDecoration(
+                  color: backgroundColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 10.0),
+                  title: Text(
+                    relay.name,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Color.fromARGB(255, 251, 251, 251),
+                      letterSpacing: 1.2,
+                      fontFamily: 'avenir',
+                    ),
+                  ),
+                  trailing: Switch(
+                    value: relay.isSetChedule,
+                    activeTrackColor: Colors.blue,
+                    inactiveThumbColor:
+                        const Color.fromARGB(255, 222, 213, 213),
+                    inactiveTrackColor:
+                        const Color.fromARGB(255, 235, 232, 232),
+                    onChanged: (bool value) {
+                      setState(() {
+                        relay.isSetChedule = value;
+                      });
+                    },
+                  ),
+                ),
+              ),
             ),
           );
         }),
       ],
     );
   }
+
+  // Widget _buildRelaysSelection(StateSetter setState) {
+  //   return Column(
+  //     crossAxisAlignment: CrossAxisAlignment.start,
+  //     children: [
+  //       const Text("Select Relays:"),
+  //       ...relays.asMap().entries.map((entry) {
+  //         int index = entry.key;
+  //         var relay = entry.value;
+  //         return ListTile(
+  //           leading: Checkbox(
+  //             value: _isSelectedRelays[index],
+  //             onChanged: (value) {
+  //               setState(() {
+  //                 _isSelectedRelays[index] = value!;
+  //               });
+  //             },
+  //           ),
+  //           title: Text(relay.name),
+  //           subtitle:
+  //               Text("Current state: ${relay.isSetChedule ? "ON" : "OFF"}"),
+  //           trailing: Switch(
+  //             value: relays[index].isSetChedule,
+  //             activeColor: Colors.green,
+  //             onChanged: (bool value) async {
+  //               setState(() {
+  //                 relays[index].isSetChedule = value;
+  //               });
+  //             },
+  //           ),
+  //         );
+  //       }),
+  //     ],
+  //   );
+  // }
 
   List<Widget> _buildDialogActions(StateSetter setState) {
     return [
@@ -1047,9 +1127,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 .toList();
 
             await _addScheduleAPI(relayName, selectedDaysList, action);
-            // ignore: use_build_context_synchronously
             Navigator.of(context).pop();
-            // ignore: use_build_context_synchronously
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text("$relayName is relay added")),
             );
@@ -1100,11 +1178,20 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     });
   }
 
+  void _toggleSelectMode() {
+    setState(() {
+      // _isAddToHomeMode = false;
+      // _selectMode = !_selectMode;
+      flatToggleSelect = !flatToggleSelect;
+      _isSelected = List.generate(schedules.length, (_) => flatToggleSelect);
+    });
+  }
+
   void _resetToNormalMode() {
     setState(() {
       _showDeleteIcon = false;
       _showEditIcon = false;
-      _selectMode = false;
+      // _selectMode = false;
     });
   }
 
@@ -1129,15 +1216,15 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       );
 
       if (response.statusCode == 200) {
-        logger.i("Schedule $scheduleId is ${state ? 'ON' : 'OFF'}");
+        print("Schedule $scheduleId is ${state ? 'ON' : 'OFF'}");
 
         // Fetch updated schedule from the server after changing the schedule status
         await fetchSchedulesAPI();
       } else {
-        logger.w("Failed to change schedule state: ${response.body}");
+        print("Failed to change schedule state: ${response.body}");
       }
     } catch (e) {
-      logger.e("Error occurred: $e");
+      print("Error occurred: $e");
     }
   }
 
@@ -1170,14 +1257,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       );
 
       if (response.statusCode == 200) {
-        logger.i("Schedule updated successfully");
+        print("Schedule updated successfully");
         await fetchSchedulesAPI();
       } else {
         // Handle specific errors based on response
-        logger.w("Failed to update Schedule: ${response.body}");
+        print("Failed to update Schedule: ${response.body}");
       }
     } catch (e) {
-      logger.e("Error occurred: $e");
+      print("Error occurred: $e");
     }
   }
 
@@ -1201,49 +1288,38 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       );
 
       if (response.statusCode == 200) {
-        logger.i("SChedule deleted successfully");
+        print("SChedule deleted successfully");
         await fetchSchedulesAPI(); // Refresh the list after deletion
       } else {
-        logger.w("Failed to delete schedule: ${response.body}");
+        print("Failed to delete schedule: ${response.body}");
       }
     } catch (e) {
-      logger.e("Error occurred: $e");
+      print("Error occurred: $e");
     }
   }
 
-  void _deleteSchedule(int index) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Delete'),
-          content: const Text('Are you sure you want to delete this Schedule?'),
-          actions: [
-            ElevatedButton(
-              onPressed: () async {
-                String scheduleId = schedules[index].id;
-                await deleteScheduleAPI(scheduleId); // Call the API to delete
-                // ignore: use_build_context_synchronously
-                Navigator.of(context).pop();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
-              ),
-              child: const Text('Yes'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey,
-              ),
-              child: const Text('No'),
-            ),
-          ],
-        );
-      },
-    );
+  void _confirmDeleteSchedules() async {
+    List<Schedule> selectedSchedulesDelete = [];
+    for (int i = 0; i < schedules.length; i++) {
+      if (_isSelected[i]) {
+        selectedSchedulesDelete.add(schedules[i]);
+      }
+    }
+    int numDeletedSchedules = 0;
+    for (var Schedule in selectedSchedulesDelete) {
+      String scheduleId = Schedule.id;
+      await deleteScheduleAPI(scheduleId);
+      numDeletedSchedules++;
+    }
+    if (numDeletedSchedules <= 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("$numDeletedSchedules schedule deleted")),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("$numDeletedSchedules schedules deleted")),
+      );
+    }
   }
 
   Widget _buildSpeedDial() {
@@ -1269,7 +1345,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             setState(() {
               _showDeleteIcon = true;
               _showEditIcon = false;
-              _selectMode = false;
+              // _selectMode = false;
             });
           },
         ),
@@ -1279,10 +1355,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             child: Icon(Icons.edit, color: Colors.blue),
           ),
           onTap: () {
-            setState(() {
+            setState(() async {
               _toggleShowEditIcon();
               _showDeleteIcon = false;
-              _selectMode = false;
+              // _selectMode = false;
             });
           },
         ),
@@ -1312,31 +1388,53 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     ? 4.5
                     : 4.0;
 
-    return CustomScrollView(
-      physics: const BouncingScrollPhysics(), // Bouncing scroll effect
-      slivers: [
-        SliverGrid(
-          delegate: SliverChildBuilderDelegate(
-            (context, index) {
-              return _buildScheduleCard(index); // Build each schedule card
-            },
-            childCount: schedules.length,
-          ),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount:
-                crossAxisCount, // Number of columns based on screen width
-            crossAxisSpacing: 8.0, // Horizontal space between items
-            mainAxisSpacing: 8.0, // Vertical space between items
-            childAspectRatio: childAspectRatio, // Aspect ratio of each card
-          ),
-        ),
-        // Add extra padding at the bottom (same as before)
-        const SliverPadding(
-          padding:
-              EdgeInsets.only(bottom: 200), // Adjust based on your card height
-        ),
-      ],
-    );
+    return schedules.isEmpty
+        ? Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  'No schedules added yet.',
+                  style: TextStyle(fontSize: 18, color: Colors.grey),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: _addSchedule,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blueAccent,
+                  ),
+                  child: const Text('Add Schedule'),
+                ),
+              ],
+            ),
+          )
+        : CustomScrollView(
+            physics: const BouncingScrollPhysics(), // Bouncing scroll effect
+            slivers: [
+              SliverGrid(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    return _buildScheduleCard(
+                        index); // Build each schedule card
+                  },
+                  childCount: schedules.length,
+                ),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount:
+                      crossAxisCount, // Number of columns based on screen width
+                  crossAxisSpacing: 8.0, // Horizontal space between items
+                  mainAxisSpacing: 8.0, // Vertical space between items
+                  childAspectRatio:
+                      childAspectRatio, // Aspect ratio of each card
+                ),
+              ),
+              // Add extra padding at the bottom (same as before)
+              const SliverPadding(
+                padding: EdgeInsets.only(
+                    bottom: 200), // Adjust based on your card height
+              ),
+            ],
+          );
   }
 
   PreferredSize _buildAppBar() {
@@ -1346,19 +1444,36 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              Color.fromARGB(255, 255, 255, 255),
-              Color.fromARGB(255, 255, 255, 255)
-            ], 
+              Color.fromARGB(255, 23, 80, 116),
+              Color.fromARGB(255, 7, 40, 75)
+            ], // Gradient colors
+            begin: Alignment.topLeft, // Start point of the gradient
+            end: Alignment.bottomRight, // End point of the gradient
           ),
         ),
         child: AppBar(
           title: const Text(
-            'Schedule'),
+            'Schedule',
+            style: TextStyle(
+              fontSize: 24, // Set the font size
+              fontWeight: FontWeight.w600, // Semi-bold font weight
+              color: Colors.white, // Text color
+              letterSpacing: 1.2, // Letter spacing for readability
+              fontFamily: 'avenir', // Use a custom font family (optional)
+            ),
+          ),
+          centerTitle: true,
           actions: [
-            if (_showDeleteIcon || _showEditIcon)
+            if (_showEditIcon)
               IconButton(
-                icon: const Icon(Icons.cancel),
+                icon: const Icon(Icons.cancel,
+                    color: Color.fromARGB(255, 255, 255, 255)),
                 onPressed: _resetToNormalMode,
+              )
+            else if (_showDeleteIcon)
+              IconButton(
+                icon: const Icon(Icons.check_box_outlined),
+                onPressed: _toggleSelectMode,
               ),
           ],
           backgroundColor: Colors
@@ -1376,12 +1491,32 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       appBar: _buildAppBar(),
       drawer: const Navbar_left(),
       body: Container(
-        decoration: backgound_Color(),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color.fromARGB(255, 232, 235, 236), // Light blue
+              Color.fromARGB(255, 194, 235, 243), // White
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
 
         // Set background color of the body here
         child: Stack(
           children: [
             _buildScheduleList(),
+            if (_showDeleteIcon)
+              Positioned(
+                bottom: 20,
+                left: 20,
+                child: FloatingActionButton.extended(
+                  onPressed: _confirmDeleteSchedules,
+                  label: const Text('Delete'),
+                  icon: const Icon(Icons.delete_sharp),
+                  backgroundColor: Colors.blueAccent,
+                ),
+              ),
             // _buildGridView(crossAxisCount, childAspectRatio),
           ],
         ),
@@ -1397,14 +1532,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             255, 187, 176, 176); // Inactive state (gray color)
 
     return GestureDetector(
-      // onTap: () {
-      //   setState(() {
-      //     _isTapped = !_isTapped; // Toggle the tapped state
-      //   });
-      // },
       onTap: () {
-        // Call _editSchedule function when the card is tapped
-        _editSchedule(index);
+        if (_showDeleteIcon) {
+          setState(() {
+            _isSelected[index] = !_isSelected[index];
+          });
+        } else {
+          _editSchedule(index);
+        }
       },
       child: MouseRegion(
         onEnter: (_) {
@@ -1453,7 +1588,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                         color: [
                           const Color.fromARGB(255, 19, 76, 130),
                           const Color(0xFF5FC6FF)
-                        // ignore: deprecated_member_use
                         ].last.withOpacity(0.4),
                         blurRadius: 8,
                         spreadRadius: 2,
@@ -1468,19 +1602,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // First Column: Icon or Checkbox
-                        _selectMode
-                            ? Checkbox(
-                                value: _isSelected[index],
-                                onChanged: (value) {
-                                  setState(() => _isSelected[index] = value!);
-                                },
-                              )
-                            : const Icon(
-                                Icons.timer_rounded,
-                                color: Colors.white,
-                                size: 30,
-                              ),
+                        const Icon(
+                          Icons.timer_rounded,
+                          color: Colors.white,
+                          size: 30,
+                        ),
                         const SizedBox(
                             width:
                                 8), // Space between icon/checkbox and next column
@@ -1540,6 +1666,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   Center _buildScheduleTrailingActions(int index) {
+    bool isSelected = _isSelected[index];
     return Center(
       // Center the Row
       child: Row(
@@ -1547,10 +1674,18 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         crossAxisAlignment: CrossAxisAlignment.center, // Center vertically
         children: [
           if (_showDeleteIcon)
-            IconButton(
-              icon: const Icon(Icons.delete,
-                  color: Color.fromARGB(255, 237, 230, 230)),
-              onPressed: () => _deleteSchedule(index),
+            Checkbox(
+              value: isSelected, // Reflect current selection state
+              // activeColor: const Color.fromARGB(255, 245, 245,
+              //     245), // Set the color of the checkbox when selected
+              // checkColor: const Color.fromARGB(255, 252, 251,
+              //     251), // Set the color of the checkmark inside the checkbox
+              onChanged: (bool? value) {
+                setState(() {
+                  _isSelected[index] =
+                      value ?? false; // Allow toggling for all relays
+                });
+              },
             ),
           if (!_showDeleteIcon &&
               !_showEditIcon) // Don't show Switch in delete, select, and adHome mode
