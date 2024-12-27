@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:frontend_daktmt/apis/apis_login.dart';
 import 'package:frontend_daktmt/custom_card.dart';
-// import 'package:frontend_daktmt/extensions/string_extensions.dart';
 import 'package:frontend_daktmt/responsive.dart';
 import 'package:logger/logger.dart';
 
@@ -19,7 +18,7 @@ class _SignInState extends State<SignIn> {
   final TextEditingController _passwordController = TextEditingController();
   bool _passwordVisible = false;
   String? _errorMessage;
-
+  bool isLoading = false;
   Future<void> _handleOnClick(BuildContext context) async {
     if (_emailController.text.isNotEmpty &&
             _passwordController
@@ -31,12 +30,14 @@ class _SignInState extends State<SignIn> {
         });
         return;
       }
+      setState(() {
+        isLoading = true;
+      });
       String? errorMessage = await fetchSignIn(
         _emailController,
         _passwordController,
         context,
       );
-
       if (errorMessage != null) {
         setState(() {
           _errorMessage = errorMessage;
@@ -46,6 +47,9 @@ class _SignInState extends State<SignIn> {
           _errorMessage = null;
         });
       }
+      setState(() {
+        isLoading = false;
+      });
     } else {
       setState(() {
         _errorMessage = "Not enough information!";
@@ -316,14 +320,14 @@ class _SignInState extends State<SignIn> {
                         child: Container(
                           constraints: BoxConstraints(
                             maxWidth: isRowLayout ? double.infinity : 500.0,
-                           
                           ),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(40),
                             color: Colors.white,
                           ),
                           padding: EdgeInsets.symmetric(
-                              horizontal: isRowLayout ? 18.0 : 50.0,vertical: isRowLayout ? 50.0 : 80.0),
+                              horizontal: isRowLayout ? 18.0 : 50.0,
+                              vertical: isRowLayout ? 50.0 : 80.0),
                           child: Column(
                             mainAxisSize:
                                 MainAxisSize.min, // Adjust size to fit content
@@ -478,14 +482,23 @@ class _SignInState extends State<SignIn> {
           ),
           child: Container(
             alignment: Alignment.center,
-            child: const Text(
-              'Sign In',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-                color: Colors.white,
-              ),
-            ),
+            child: isLoading
+                ? const Center(
+                    child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                    ),
+                  ))
+                : const Text(
+                    'Sign In',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      color: Colors.white,
+                    ),
+                  ),
           ),
         ),
       ),

@@ -26,7 +26,7 @@ class _RegisterState extends State<Register> {
 
   bool _isVerificationCodeVisible = false;
   bool _passwordVisible = false;
-
+  bool isLoading = false;
   String? _errorMessage;
 
   // Timer-related variables
@@ -58,6 +58,7 @@ class _RegisterState extends State<Register> {
   }
 
   Future<void> _handleOnClick(BuildContext context) async {
+   
     if (_emailController.text.isNotEmpty && _code.text.isNotEmpty) {
       String? confirmCodeResult = await fetchConfirmcode(
         _emailController.text,
@@ -116,7 +117,7 @@ class _RegisterState extends State<Register> {
     }
 
     String? sendCodeResult = await fetchSendcode(_emailController.text);
-
+     
     if (sendCodeResult == "Successful code submission") {
       setState(() {
         _isVerificationCodeVisible = true;
@@ -127,6 +128,9 @@ class _RegisterState extends State<Register> {
         _errorMessage = sendCodeResult;
       });
     }
+    setState(() {
+      isLoading = false;
+    });
   }
 
   @override
@@ -163,7 +167,8 @@ class _RegisterState extends State<Register> {
                   borderRadius: BorderRadius.circular(22),
                   color: Colors.white,
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 35,vertical: 40),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 35, vertical: 40),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -405,9 +410,12 @@ class _RegisterState extends State<Register> {
             });
             return;
           }
-
+          setState(() {
+            isLoading = true;
+          });
           _sendcode();
           startTimer();
+
         },
         child: Ink(
           decoration: BoxDecoration(
@@ -421,14 +429,23 @@ class _RegisterState extends State<Register> {
           ),
           child: Container(
             alignment: Alignment.center,
-            child: const Text(
-              'Sign Up',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
+            child: isLoading
+                ? const Center(
+                    child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                    ),
+                  ))
+                : const Text(
+                    'Sign Up',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      color: Color.fromARGB(255, 255, 255, 255),
+                    ),
+                  ),
           ),
         ),
       ),

@@ -18,7 +18,7 @@ class _ForgetState extends State<Forget> {
   final TextEditingController _passwordController_1 = TextEditingController();
   final TextEditingController _passwordController_2 = TextEditingController();
   final TextEditingController _code = TextEditingController();
-
+  bool isLoading = false;
   bool _isVerificationCodeVisible = false;
   bool _passwordVisible = false;
 
@@ -129,6 +129,9 @@ class _ForgetState extends State<Forget> {
         _errorMessage = sendCodeResult;
       });
     }
+    setState(() {
+      isLoading = false;
+    });
   }
 
   @override
@@ -166,7 +169,8 @@ class _ForgetState extends State<Forget> {
                   borderRadius: BorderRadius.circular(22),
                   color: Colors.white,
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 30,vertical: 100),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 30, vertical: 100),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -365,7 +369,10 @@ class _ForgetState extends State<Forget> {
                 });
                 return;
               }
-
+              setState(() {
+                _errorMessage = null;
+                isLoading = true;
+              });
               _sendcode();
               startTimer();
             },
@@ -381,14 +388,23 @@ class _ForgetState extends State<Forget> {
               ),
               child: Container(
                 alignment: Alignment.center,
-                child: const Text(
-                  'Next',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
+                child: isLoading
+                    ? const Center(
+                        child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                        ),
+                      ))
+                    : const Text(
+                        'Next',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                          color: Color.fromARGB(255, 255, 255, 255),
+                        ),
+                      ),
               ),
             ),
           ),
