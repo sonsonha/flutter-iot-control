@@ -281,7 +281,7 @@ class _SignInState extends State<SignIn> {
                             'Welcome to CaCoIot!',
                             style: TextStyle(
                               fontSize: 30,
-                              color: Colors.white,
+                              color: Color.fromARGB(255, 255, 255, 255),
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -323,7 +323,7 @@ class _SignInState extends State<SignIn> {
                           ),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(40),
-                            color: Colors.white,
+                            color: const Color.fromARGB(235, 255, 255, 255),
                           ),
                           padding: EdgeInsets.symmetric(
                               horizontal: isRowLayout ? 18.0 : 50.0,

@@ -104,7 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ? Row(
                         children: [
                           Padding(
-                            padding: const EdgeInsets.fromLTRB(10, 10, 0, 10),
+                            padding: const EdgeInsets.fromLTRB(10, 20, 0, 10),
                             child: SizedBox(
                                 width: 300,
                                 height: MediaQuery.of(context).size.height,
@@ -140,7 +140,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                                   children: [
                                                     toggle(
                                                       toggleHeight: 150.0,
-                                                      toggleWidth: screenWidth*0.44,
+                                                      toggleWidth:
+                                                          screenWidth * 0.44,
                                                       numOfRelay: 6,
                                                     ),
                                                     latitude == 0.0 &&
@@ -209,21 +210,19 @@ class _HomeScreenState extends State<HomeScreen> {
                       )
                     : Column(
                         children: [
-                          const SizedBox(height: 90.0),
+                          const SizedBox(height: 100.0),
                           const toggle(
                             toggleHeight: 270.0,
                             toggleWidth: 350.0,
                             numOfRelay: 3,
                           ),
-                          const SizedBox(height: 40),
+                          const SizedBox(height: 20),
                           Container(
                             width: double.infinity,
                             padding: const EdgeInsets.all(10.0),
-                            decoration: BoxDecoration(
-                              color: const Color.fromARGB(255, 243, 243, 243)
-                                  // ignore: deprecated_member_use
-                                  .withOpacity(1),
-                              borderRadius: const BorderRadius.vertical(
+                            decoration: const BoxDecoration(
+                              color: Color.fromARGB(195, 243, 243, 243),
+                              borderRadius: BorderRadius.vertical(
                                 top: Radius.circular(17.0),
                               ),
                             ),

@@ -173,7 +173,7 @@ class _ForgetState extends State<Forget> {
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(22),
-                  color: Colors.white,
+                  color: const Color.fromRGBO(235, 255, 255, 1),
                 ),
                 padding:
                     const EdgeInsets.symmetric(horizontal: 30, vertical: 100),

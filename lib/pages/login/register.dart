@@ -169,7 +169,7 @@ class _RegisterState extends State<Register> {
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(22),
-                  color: Colors.white,
+                  color: const Color.fromARGB(235, 255, 255, 255),
                 ),
                 padding:
                     const EdgeInsets.symmetric(horizontal: 35, vertical: 40),
