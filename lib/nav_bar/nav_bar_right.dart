@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
 import 'package:frontend_daktmt/responsive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -39,6 +41,18 @@ int? _hoveredIndex;
 // List<Schedule> schedules = [];
 List<Schedule> todaySchedules = [];
 
+final currentDay = DateTime.now().weekday;
+final daysOfWeek = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday'
+];
+final today = daysOfWeek[currentDay - 1];
+
 // ignore: camel_case_types
 class nabarright_set extends StatefulWidget {
   const nabarright_set({super.key});
@@ -54,7 +68,7 @@ class _nabarright_setState extends State<nabarright_set> {
   void initState() {
     super.initState();
     _loadProfile();
-    fetchSchedulesAPI();
+    fetchSchedulesAPI(today);
   }
 
   Future<void> _loadProfile() async {
@@ -80,21 +94,64 @@ class _nabarright_setState extends State<nabarright_set> {
     }
   }
 
-  Future<void> fetchSchedulesAPI() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    final responseData = prefs.getString('schedules_home');
-    if (responseData != null) {
-      try {
-        final List<dynamic> jsonSchedules = json.decode(responseData);
-        List<Schedule> fetchedSchedules = jsonSchedules
-            .map<Schedule>((scheduleJson) => Schedule.fromJson(scheduleJson))
-            .toList();
-        setState(() {
-          todaySchedules = fetchedSchedules;
-        });
-      } catch (e) {
-        logger.e("Error parsing local schedules: $e");
+  // Future<void> fetchSchedulesAPI() async {
+  //   SharedPreferences prefs = await SharedPreferences.getInstance();
+  //   final responseData = prefs.getString('schedules_home');
+  //   if (responseData != null) {
+  //     try {
+  //       final List<dynamic> jsonSchedules = json.decode(responseData);
+  //       List<Schedule> fetchedSchedules = jsonSchedules
+  //           .map<Schedule>((scheduleJson) => Schedule.fromJson(scheduleJson))
+  //           .toList();
+  //       setState(() {
+  //         todaySchedules = fetchedSchedules;
+  //       });
+  //     } catch (e) {
+  //       logger.e("Error parsing local schedules: $e");
+  //     }
+  //   }
+  // }
+
+  Future<void> fetchSchedulesAPI(String day) async {
+    final prefs = await SharedPreferences.getInstance();
+    var token = prefs.getString('accessToken')!;
+    final baseUrl = dotenv.env['API_BASE_URL']!;
+    final url = Uri.parse('http://$baseUrl/schedule/get-home');
+
+    Map<String, dynamic> requestBody = {
+      "day": day,
+    };
+
+    try {
+      var response = await http.patch(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token'
+        },
+        body: jsonEncode(requestBody),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+
+        if (responseData is List) {
+          List<Schedule> fetchedSchedules = responseData
+              .map<Schedule>((scheduleJson) => Schedule.fromJson(scheduleJson))
+              .toList();
+
+          setState(() {
+            todaySchedules = fetchedSchedules;
+          });
+          print("Success to fetch schedules");
+        } else {
+          print("Unexpected response format: ${response.body}");
+        }
+      } else {
+        print("Failed to fetch schedules: ${response.body}");
       }
+    } catch (e) {
+      print("Error occurred: $e");
     }
   }
 
@@ -159,8 +216,6 @@ class _nabarright_setState extends State<nabarright_set> {
                       )
                     : Container(),
                 SizedBox(width: isRowLayout ? 8 : 0, height: 10),
-                
-
               ],
             ),
           ),

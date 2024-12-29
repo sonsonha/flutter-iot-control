@@ -225,6 +225,34 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
       if (response.statusCode == 200) {
         print("Schedule added successfully");
+
+        // Đọc danh sách hiện tại từ SharedPreferences
+        String? schedulesHomeJson = prefs.getString('schedules_home');
+        List<dynamic> schedulesHomeData =
+            schedulesHomeJson != null ? jsonDecode(schedulesHomeJson) : [];
+
+        // Lấy ngày hiện tại
+        String currentDayName =
+            weekDayMapping[DateTime.now().weekday]!; // Lấy tên ngày hiện tại
+        print("yasuo: $schedulesHomeJson");
+        print("day: $day");
+        print("currentDayName: $currentDayName");
+
+        // Nếu ngày hiện tại nằm trong danh sách ngày đã chọn, thêm schedule vào `schedules_home`
+        if (day.contains(currentDayName)) {
+          schedulesHomeData.add({
+            "schedule_name": scheduleName,
+            "day": day,
+            "time": timeString,
+            "actions": actions,
+          });
+
+          // Lưu danh sách đã cập nhật vào SharedPreferences
+          await prefs.setString(
+              'schedules_home', jsonEncode(schedulesHomeData));
+          print("Updated schedules_home: $schedulesHomeData");
+        }
+
         await fetchSchedulesAPI(); // Fetch updated schedules after adding
       } else {
         print("Failed to add schedule: ${response.body}");
@@ -233,6 +261,16 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       print("Error adding schedule: $e");
     }
   }
+
+  static const Map<int, String> weekDayMapping = {
+    1: "Monday",
+    2: "Tuesday",
+    3: "Wednesday",
+    4: "Thursday",
+    5: "Friday",
+    6: "Saturday",
+    7: "Sunday",
+  };
 
   TimeOfDay parseTimeString(String time) {
     try {
