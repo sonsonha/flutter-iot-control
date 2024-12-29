@@ -26,17 +26,12 @@ class CustomCard extends StatelessWidget {
 BoxDecoration backgound_Color() {
   return const BoxDecoration(
     gradient: LinearGradient(
-      colors: [
-        Color.fromARGB(255, 0, 94, 255),
-        Color.fromARGB(255, 27, 177, 0),
-        Color.fromARGB(255, 255, 187, 0),
-      ],
+      colors: [  Color.fromARGB(255, 163, 233, 245), Color.fromARGB(255, 0, 110, 255), Color.fromARGB(255, 163, 233, 245)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
   );
 }
-
 
 class DividerWithText extends StatelessWidget {
   const DividerWithText({super.key});

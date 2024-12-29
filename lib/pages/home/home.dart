@@ -104,7 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ? Row(
                         children: [
                           Padding(
-                            padding: const EdgeInsets.fromLTRB(10, 20, 0, 10),
+                            padding: const EdgeInsets.fromLTRB(10, 10, 0, 10),
                             child: SizedBox(
                                 width: 300,
                                 height: MediaQuery.of(context).size.height,
@@ -125,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               alignment: Alignment.centerLeft,
                               child: Column(
                                 children: [
-                                  const SizedBox(height: 60),
+                                  const SizedBox(height: 70),
                                   Expanded(
                                     // Thêm Expanded ở đây
                                     child: SingleChildScrollView(
