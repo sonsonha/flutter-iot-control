@@ -363,11 +363,11 @@ class _RelayScreenState extends State<RelayScreen> {
           // }).toList();
 
           // Lọc `homeRelays` từ `relaysData` và `relaysHomeData`
-          // List<String> homeRelayIds = relaysHomeData
-          //     .map<String>((relay) => relay['relay_id'].toString())
-          //     .toList();
-          // homeRelays =
-          //     relays.where((relay) => homeRelayIds.contains(relay.id)).toList();
+          List<String> homeRelayIds = relaysHomeData
+              .map<String>((relay) => relay['relay_id'].toString())
+              .toList();
+          homeRelays =
+              relays.where((relay) => homeRelayIds.contains(relay.id)).toList();
         });
 
         logger.i("Relay lists updated in UI successfully.");
@@ -467,27 +467,44 @@ class _RelayScreenState extends State<RelayScreen> {
 
         // Đọc danh sách relays hiện tại từ SharedPreferences
         String? relaysJson = prefs.getString('relays');
-        if (relaysJson != null) {
-          List<dynamic> relaysData = jsonDecode(relaysJson);
+        String? relaysHomeJson = prefs.getString('relays_home');
 
-          // Xóa relay khỏi danh sách
-          relaysData.removeWhere(
-              (relay) => relay['relay_id'].toString().trim() == relayId.trim());
+        List<dynamic> relaysData =
+            relaysJson != null ? jsonDecode(relaysJson) : [];
+        List<dynamic> relaysHomeData =
+            relaysHomeJson != null ? jsonDecode(relaysHomeJson) : [];
 
-          // Lưu danh sách đã cập nhật vào SharedPreferences
-          await prefs.setString('relays', jsonEncode(relaysData));
+        // Xóa relay khỏi danh sách `relays`
+        relaysData.removeWhere(
+            (relay) => relay['relay_id'].toString().trim() == relayId.trim());
 
-          // Cập nhật giao diện
-          setState(() {
-            relays = relaysData.map<Relay>((relay) {
-              return Relay(
-                id: relay['relay_id'].toString(),
-                name: relay['relay_name'],
-                isOn: relay['state'],
-              );
-            }).toList();
-          });
-        }
+        // Xóa relay khỏi danh sách `relays_home`
+        relaysHomeData.removeWhere(
+            (relay) => relay['relay_id'].toString().trim() == relayId.trim());
+
+        // Lưu danh sách đã cập nhật vào SharedPreferences
+        await prefs.setString('relays', jsonEncode(relaysData));
+        await prefs.setString('relays_home', jsonEncode(relaysHomeData));
+
+        // Cập nhật giao diện
+        setState(() {
+          relays = relaysData.map<Relay>((relay) {
+            return Relay(
+              id: relay['relay_id'].toString(),
+              name: relay['relay_name'],
+              isOn: relay['state'],
+            );
+          }).toList();
+
+          // Cập nhật danh sách homeRelays
+          homeRelays = relaysHomeData.map<Relay>((relay) {
+            return Relay(
+              id: relay['relay_id'].toString(),
+              name: relay['relay_name'],
+              isOn: relay['state'],
+            );
+          }).toList();
+        });
       } else {
         logger.w("Failed to delete relay: ${response.body}");
       }
@@ -1236,9 +1253,37 @@ class _RelayScreenState extends State<RelayScreen> {
                 setState(() {
                   relays[index].isOn = value;
                 });
-                await setRelayStatusAPI(relays[index].id, value);
+
+                try {
+                  await setRelayStatusAPI(relays[index].id, value);
+                } catch (e) {
+                  logger.e("Error occurred while updating relay status: $e");
+
+                  // Nếu xảy ra lỗi, khôi phục trạng thái cũ
+                  setState(() {
+                    relays[index].isOn = !value;
+                  });
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                          "Failed to update relay status: ${e.toString()}"),
+                    ),
+                  );
+                }
               },
             ),
+
+          // Switch(
+          //   value: relays[index].isOn,
+          //   activeColor: const Color.fromARGB(255, 252, 252, 252),
+          //   onChanged: (bool value) async {
+          //     setState(() {
+          //       relays[index].isOn = value;
+          //     });
+          //     await setRelayStatusAPI(relays[index].id, value);
+          //   },
+          // ),
           if (_showEditIcon)
             IconButton(
               icon: const Icon(Icons.edit,
