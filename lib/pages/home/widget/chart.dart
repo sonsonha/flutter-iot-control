@@ -36,9 +36,9 @@ class _ChartState extends State<Chart> {
   Future<List<Map<String, dynamic>>> fetchData(
       String token, String label, int time) async {
     if (label == 'Humidity') {
-      return await fetchloghumidata(token, time);
+      return await fetchloghumidata(time);
     } else {
-      return await fetchlogtempdata(token, time);
+      return await fetchlogtempdata(time);
     }
   }
 

@@ -12,6 +12,7 @@ class navbarleft_set extends StatelessWidget {
   Widget build(BuildContext context) {
     // Sử dụng MediaQuery để lấy chiều rộng màn hình
     final isMobile = Responsive.isMobile(context);
+    // final theme = Theme.of(context);
 
     return isMobile
         ? Positioned(
@@ -21,7 +22,7 @@ class navbarleft_set extends StatelessWidget {
               builder: (context) => IconButton(
                 icon: const Icon(
                   Icons.menu,
-                  color: Colors.white,
+                  color: Color.fromARGB(255, 5, 16, 49),
                   size: 35.0,
                 ),
                 onPressed: () {
@@ -33,6 +34,8 @@ class navbarleft_set extends StatelessWidget {
         : const SizedBox();
   }
 }
+
+
 
 // ignore: camel_case_types
 class Navbar_left extends StatelessWidget {
@@ -46,40 +49,84 @@ class Navbar_left extends StatelessWidget {
         padding: const EdgeInsets.only(top: 40.0),
         child: ListView(
           padding: EdgeInsets.zero,
+          
           children: [
             ListTile(
                 leading: const Icon(Icons.home),
-                title: const Text('Home'),
+                title: const Text(
+                'Home',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 17.0,
+                  color: Color.fromARGB(255, 18, 18, 25),
+                )
+                // overflow:
+                //     TextOverflow.ellipsis, // Adds "..." if the text is too long
+                // maxLines: 1, // Limits to a single line
+                // softWrap: false, // Prevents wrapping to a new line
+                ),
                 onTap: () {
                   Navigator.pushReplacementNamed(context, '/home');
                 }),
             ListTile(
                 leading: const Icon(Icons.history),
-                title: const Text('History'),
+                title: const Text(
+                'History',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 17.0,
+                  color: Color.fromARGB(255, 19, 19, 24),
+                )),
                 onTap: () {
                   Navigator.pushReplacementNamed(context, '/history');
                 }),
             ListTile(
                 leading: const Icon(Icons.replay),
-                title: const Text('Relay'),
+                title: const Text(
+                'Relay',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 17.0,
+                  color: Color.fromARGB(255, 18, 18, 25),
+                )
+                ),
                 onTap: () {
                   Navigator.pushReplacementNamed(context, '/relay');
                 }),
             ListTile(
                 leading: const Icon(Icons.schedule),
-                title: const Text('Schedule'),
+                title: const Text(
+                'Schedule',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 17.0,
+                  color: Color.fromARGB(255, 18, 18, 25),
+                )),
                 onTap: () {
                   Navigator.pushReplacementNamed(context, '/schedule');
                 }),
             ListTile(
                 leading: const Icon(Icons.people),
-                title: const Text('Profile'),
+                title: const Text(
+                'Profile',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 17.0,
+                  color: Color.fromARGB(255, 18, 18, 25),
+                )),
                 onTap: () {
                   Navigator.pushReplacementNamed(context, '/profile');
                 }),
             ListTile(
                 leading: const Icon(Icons.settings),
-                title: const Text('Setting'),
+                title: const Text(
+                'Setting',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 17.0,
+                  color: Color.fromARGB(255, 18, 18, 25),
+                )
+                ),
                 onTap: () {
                   Navigator.pushReplacementNamed(context, '/setting');
                 }),

@@ -38,7 +38,7 @@ Future<String?> fetchSignIn(TextEditingController emailController,
         await prefs.setDouble('temperature', jsonData['temperature']);
       }
 
-// Kiểm tra và xử lý giá trị của humidity
+      // Kiểm tra và xử lý giá trị của humidity
       if (jsonData['humidity'] is double) {
         await prefs.setDouble('humidity', jsonData['humidity']);
       } else if (jsonData['humidity'] is String) {

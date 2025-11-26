@@ -39,6 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    // fetchRefreshToken();
     fetchSensorData();
     startRefreshTokenTimer(fetchSensorData);
   }
@@ -51,6 +52,7 @@ class _HomeScreenState extends State<HomeScreen> {
       token = prefs.getString('accessToken')!;
       double humidityData = prefs.getDouble('humidity') ?? 0.0;
       double temperatureData = prefs.getDouble('temperature') ?? 0.0;
+      // print("TOKEN IN HOMESCREEN BEFORE CHART: $token");
 
       String? savedLocation = prefs.getString('location');
       if (savedLocation == null || savedLocation.isEmpty) {
@@ -81,6 +83,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    
     final isMobile = Responsive.isMobile(context);
     final isDesktop = Responsive.isDesktop(context);
     final double gaugeHeight = isMobile ? 200.0 : 150.0;
@@ -115,7 +118,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: VerticalDivider(
                               width: 1,
                               thickness: 2,
-                              color: Color.fromARGB(255, 202, 202, 202),
+                              // color: Color.fromARGB(255, 202, 202, 202),
+                              color: Color.fromARGB(255, 17, 163, 212),
                               indent: 20,
                               endIndent: 20,
                             ),
@@ -140,15 +144,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                                   children: [
                                                     toggle(
                                                       toggleHeight: 150.0,
-                                                      toggleWidth:
-                                                          screenWidth * 0.44,
+                                                      toggleWidth: screenWidth * 0.44,
                                                       numOfRelay: 6,
                                                     ),
-                                                    latitude == 0.0 &&
-                                                            longitude == 0.0
+                                                    latitude == 0.0 && longitude == 0.0
                                                         ? const Center(
-                                                            child:
-                                                                CircularProgressIndicator())
+                                                            child: CircularProgressIndicator())
                                                         : map(
                                                             mapHeight: 350.0,
                                                             mapWidth: 1000,

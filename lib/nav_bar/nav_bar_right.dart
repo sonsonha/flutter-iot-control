@@ -51,6 +51,7 @@ final daysOfWeek = [
   'Saturday',
   'Sunday'
 ];
+
 final today = daysOfWeek[currentDay - 1];
 
 // ignore: camel_case_types
@@ -93,24 +94,6 @@ class _nabarright_setState extends State<nabarright_set> {
       logger.w("No profileData found in SharedPreferences.");
     }
   }
-
-  // Future<void> fetchSchedulesAPI() async {
-  //   SharedPreferences prefs = await SharedPreferences.getInstance();
-  //   final responseData = prefs.getString('schedules_home');
-  //   if (responseData != null) {
-  //     try {
-  //       final List<dynamic> jsonSchedules = json.decode(responseData);
-  //       List<Schedule> fetchedSchedules = jsonSchedules
-  //           .map<Schedule>((scheduleJson) => Schedule.fromJson(scheduleJson))
-  //           .toList();
-  //       setState(() {
-  //         todaySchedules = fetchedSchedules;
-  //       });
-  //     } catch (e) {
-  //       logger.e("Error parsing local schedules: $e");
-  //     }
-  //   }
-  // }
 
   Future<void> fetchSchedulesAPI(String day) async {
     final prefs = await SharedPreferences.getInstance();

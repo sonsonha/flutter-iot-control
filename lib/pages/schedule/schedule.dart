@@ -1684,7 +1684,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   222), // Custom color for the "off" thumb (circle)
               inactiveTrackColor:
                   Colors.grey, // Custom color for the "off" track (background)
-              activeColor: Colors.white,
+              activeThumbColor: Colors.white,
               onChanged: (bool value) async {
                 setState(() {
                   schedules[index].isOn = value;

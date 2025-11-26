@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import 'package:http/http.dart' as http;
 import '../home.dart';
 
 class Relay {
@@ -47,25 +48,68 @@ class _ToggleState extends State<toggle> {
     fetchHomeRelays();
   }
 
-  Future<void> fetchHomeRelays() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    final responseData = prefs.getString('relays_home');
+  // Future<void> fetchHomeRelays() async {
+  //   SharedPreferences prefs = await SharedPreferences.getInstance();
+  //   final responseData = prefs.getString('relays_home');
 
-    if (responseData != null) {
-      try {
-        final decodedData = json.decode(responseData);
-        if (decodedData is List) {
+  //   if (responseData != null) {
+  //     try {
+  //       final decodedData = json.decode(responseData);
+  //       if (decodedData is List) {
+  //         setState(() {
+  //           homeRelays = decodedData
+  //               .map<Relay>((relayJson) => Relay.fromJson(relayJson))
+  //               .toList();
+  //         });
+  //       }
+  //     } catch (e) {
+  //       logger.e("Error parsing relays_home data: $e");
+  //     }
+  //   } else {
+  //     logger.i("No relays_home data found.");
+  //   }
+  // }
+
+    Future<void> fetchHomeRelays() async {
+    final prefs = await SharedPreferences.getInstance();
+    var token = prefs.getString('accessToken')!;
+    final baseUrl = dotenv.env['API_BASE_URL']!;
+    final url = Uri.parse('http://$baseUrl/relay/get-home');
+    try {
+      var response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token'
+        },
+      );
+
+      if (response.statusCode == 200) {
+        var data = json.decode(response.body);
+        if (data is List<dynamic>) {
+          List<Relay> fetchedRelays = data.map((relay) {
+            return Relay(
+              id: relay['relay_id'],
+              name: relay['relay_name'],
+              isOn: relay['state'],
+            );
+          }).toList();
+          if (mounted) {
+            setState(() {
+              homeRelays = fetchedRelays;
+            });
+          }
+        } else {
           setState(() {
-            homeRelays = decodedData
-                .map<Relay>((relayJson) => Relay.fromJson(relayJson))
-                .toList();
+            homeRelays = [];
           });
+          logger.w("Unexpected response format: ${response.body}");
         }
-      } catch (e) {
-        logger.e("Error parsing relays_home data: $e");
+      } else {
+        logger.w("Failed to fetch home relays: ${response.body}");
       }
-    } else {
-      logger.i("No relays_home data found.");
+    } catch (e) {
+      logger.e("Error occurred: $e");
     }
   }
 

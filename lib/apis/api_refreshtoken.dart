@@ -12,7 +12,7 @@ Future<String> fetchRefreshToken() async {
   final baseUrl = dotenv.env['API_BASE_URL']!;
   final url = Uri.parse('http://$baseUrl/refresh-token');
   SharedPreferences prefs = await SharedPreferences.getInstance();
-
+  var token = prefs.getString('accessToken')!;
   // Lấy refreshToken thay vì accessToken
   final refreshToken = prefs.getString('refreshToken');
 
@@ -26,6 +26,7 @@ Future<String> fetchRefreshToken() async {
       url,
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
       },
       body: json.encode({
         'refreshToken': refreshToken,
@@ -33,6 +34,7 @@ Future<String> fetchRefreshToken() async {
     );
 
     if (response.statusCode == 200) {
+      logger.i("Succesfully fetch Token abc!!!");
       final jsonData = json.decode(response.body);
 
       // Lưu accessToken mới vào SharedPreferences
@@ -50,7 +52,7 @@ Future<String> fetchRefreshToken() async {
 }
 
 void startRefreshTokenTimer(Function updateSensorData) {
-  Timer.periodic(const Duration(minutes: 30), (timer) async {
+  Timer.periodic(const Duration(minutes: 15), (timer) async {
     // Lấy token mới
 
     final token = await fetchRefreshToken();

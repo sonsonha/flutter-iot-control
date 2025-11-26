@@ -354,15 +354,6 @@ class _RelayScreenState extends State<RelayScreen> {
 
         // Cập nhật giao diện
         setState(() {
-          // relays = relaysData.map<Relay>((relay) {
-          //   return Relay(
-          //     id: relay['relay_id'].toString(),
-          //     name: relay['relay_name'],
-          //     isOn: relay['state'],
-          //   );
-          // }).toList();
-
-          // Lọc `homeRelays` từ `relaysData` và `relaysHomeData`
           List<String> homeRelayIds = relaysHomeData
               .map<String>((relay) => relay['relay_id'].toString())
               .toList();
@@ -608,42 +599,6 @@ class _RelayScreenState extends State<RelayScreen> {
       },
     );
   }
-
-  // Delete relays
-  // void _deleteRelay(int index) {
-  //   showDialog(
-  //     context: context,
-  //     builder: (context) {
-  //       return AlertDialog(
-  //         title: const Text('Delete'),
-  //         content: const Text('Are you sure you want to delete this relay?'),
-  //         actions: [
-  //           ElevatedButton(
-  //             onPressed: () async {
-  //               String relayId = relays[index].id;
-  //               await deleteRelayAPI(relayId); // Call the API to delete
-  //               // ignore: use_build_context_synchronously
-  //               Navigator.of(context).pop();
-  //             },
-  //             style: ElevatedButton.styleFrom(
-  //               backgroundColor: Colors.redAccent,
-  //             ),
-  //             child: const Text('Yes'),
-  //           ),
-  //           ElevatedButton(
-  //             onPressed: () {
-  //               Navigator.of(context).pop();
-  //             },
-  //             style: ElevatedButton.styleFrom(
-  //               backgroundColor: Colors.grey,
-  //             ),
-  //             child: const Text('No'),
-  //           ),
-  //         ],
-  //       );
-  //     },
-  //   );
-  // }
 
   void _toggleSelectMode() {
     setState(() {
@@ -983,25 +938,6 @@ class _RelayScreenState extends State<RelayScreen> {
     );
   }
 
-  // AppBar _buildAppBar() {
-  //   return AppBar(
-  //     title: const Text('Relay', style: TextStyle(fontSize: 24)),
-  //     actions: [
-  //       if (_showEditIcon || _isAddToHomeMode)
-  //         IconButton(
-  //           icon: const Icon(Icons.cancel),
-  //           onPressed: _resetToNormalMode,
-  //         )
-  //       else if (_showDeleteIcon)
-  //         IconButton(
-  //           icon: const Icon(Icons.check_box_outlined),
-  //           onPressed: _toggleSelectMode,
-  //         ),
-  //     ],
-  //     backgroundColor: Colors.blueAccent,
-  //   );
-  // }
-
   Widget _buildRelayList() {
     var screenWidth = MediaQuery.of(context).size.width;
 
@@ -1248,7 +1184,7 @@ class _RelayScreenState extends State<RelayScreen> {
               !_showEditIcon) // Don't show Switch in delete, select, and adHome mode
             Switch(
               value: relays[index].isOn,
-              activeColor: const Color.fromARGB(255, 252, 252, 252),
+              activeThumbColor: const Color.fromARGB(255, 252, 252, 252),
               onChanged: (bool value) async {
                 setState(() {
                   relays[index].isOn = value;
@@ -1274,16 +1210,6 @@ class _RelayScreenState extends State<RelayScreen> {
               },
             ),
 
-          // Switch(
-          //   value: relays[index].isOn,
-          //   activeColor: const Color.fromARGB(255, 252, 252, 252),
-          //   onChanged: (bool value) async {
-          //     setState(() {
-          //       relays[index].isOn = value;
-          //     });
-          //     await setRelayStatusAPI(relays[index].id, value);
-          //   },
-          // ),
           if (_showEditIcon)
             IconButton(
               icon: const Icon(Icons.edit,

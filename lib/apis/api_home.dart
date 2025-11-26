@@ -94,7 +94,7 @@ Future<LatLng> fetchLocationData(String token) async {
       return LatLng(latitude, longitude);
     } else {
       final result = json.decode(response.body);
-      logger.e('Error from API: ${result['error']}'); // In lỗi từ API
+      logger.e('Error from API location: ${result['error']}'); // In lỗi từ API
     }
   } catch (error) {
     logger
@@ -104,9 +104,10 @@ Future<LatLng> fetchLocationData(String token) async {
   return const LatLng(0.00, 0.00);
 }
 
-Future<List<Map<String, dynamic>>> fetchloghumidata(
-    String token, int time) async {
+Future<List<Map<String, dynamic>>> fetchloghumidata(int time) async {
   try {
+    final prefs = await SharedPreferences.getInstance();
+    var token = prefs.getString('accessToken')!;
     final baseUrl = dotenv.env['API_BASE_URL']!;
     final response = await http.post(
       Uri.parse('http://$baseUrl/log/humi'),
@@ -141,20 +142,20 @@ Future<List<Map<String, dynamic>>> fetchloghumidata(
       }).toList();
     } else {
       final result = json.decode(response.body);
-      logger.e('Error: ${result['error']}');
-      throw Exception('Failed to load data: ${result['error']}');
+      logger.e('Error log humidity: ${result['error']}');
+      throw Exception('Failed to load log humidata: ${result['error']}');
     }
   } catch (error) {
-    logger.e('Error fetching data: $error');
-    throw Exception('Error fetching data');
+    logger.e('Error fetching log humidata: $error');
+    throw Exception('Error fetching log humidata');
   }
 }
 
-Future<List<Map<String, dynamic>>> fetchlogtempdata(
-    String token, int time) async {
+Future<List<Map<String, dynamic>>> fetchlogtempdata(int time) async {
   try {
+    final prefs = await SharedPreferences.getInstance();
+    var token = prefs.getString('accessToken')!;
     final baseUrl = dotenv.env['API_BASE_URL']!;
-
     final response = await http.post(
       Uri.parse('http://$baseUrl/log/temp'),
       headers: {
@@ -190,11 +191,11 @@ Future<List<Map<String, dynamic>>> fetchlogtempdata(
       }).toList();
     } else {
       final result = json.decode(response.body);
-      logger.e('Error: ${result['error']}');
-      throw Exception('Failed to load data: ${result['error']}');
+      logger.e('Error log Temperature: ${result['error']}');
+      throw Exception('Failed to load log tempedata: ${result['error']}');
     }
   } catch (error) {
-    logger.e('Error fetching data: $error');
-    throw Exception('Error fetching data');
+    logger.e('Error fetching log tempedata: $error');
+    throw Exception('Error fetching log tempedata');
   }
 }
