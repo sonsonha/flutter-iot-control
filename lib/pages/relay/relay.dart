@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:logger/logger.dart';
+import 'package:frontend_daktmt/responsive.dart';
 
 final Logger logger = Logger();
 
@@ -110,21 +111,26 @@ class _RelayScreenState extends State<RelayScreen> {
 
   Future<List<String>> fetchHomeRelays() async {
     final prefs = await SharedPreferences.getInstance();
-    var token = prefs.getString('accessToken')!;
+    final token = prefs.getString('accessToken')!;
+    final cabinetId = prefs.getString('selectedCabinetId')!;
     final baseUrl = dotenv.env['API_BASE_URL']!;
-    final url = Uri.parse('http://$baseUrl/relay/get-home');
+
+    final url =
+        Uri.parse('http://$baseUrl/relay/$cabinetId/get-home');
+
     try {
-      var response = await http.get(
+      final response = await http.get(
         url,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token'
+          'Authorization': 'Bearer $token',
         },
       );
 
       if (response.statusCode == 200) {
-        List<dynamic> data = jsonDecode(response.body);
-        await prefs.setString('relays_home', json.encode(data));
+        final data = jsonDecode(response.body);
+        await prefs.setString('relays_home', jsonEncode(data));
+
         return data
             .map<String>((relay) => relay['relay_id'].toString())
             .toList();
@@ -142,7 +148,8 @@ class _RelayScreenState extends State<RelayScreen> {
     final prefs = await SharedPreferences.getInstance();
     var token = prefs.getString('accessToken')!;
     final baseUrl = dotenv.env['API_BASE_URL']!;
-    final url = Uri.parse('http://$baseUrl/relay/set-home');
+    final cabinetId = prefs.getString('selectedCabinetId')!;
+    final url = Uri.parse('http://$baseUrl/relay/$cabinetId/set-home');
     try {
       Map<String, dynamic> requestBody = {
         'relay_id': relayId,
@@ -197,39 +204,39 @@ class _RelayScreenState extends State<RelayScreen> {
 
   Future<void> fetchRelaysAPI() async {
     final prefs = await SharedPreferences.getInstance();
-    var token = prefs.getString('accessToken')!;
+    final token = prefs.getString('accessToken')!;
+    final cabinetId = prefs.getString('selectedCabinetId')!;
     final baseUrl = dotenv.env['API_BASE_URL']!;
-    final url = Uri.parse('http://$baseUrl/relay/get');
+
+    final url = Uri.parse('http://$baseUrl/relay/$cabinetId/get');
+
     try {
-      var response = await http.get(url, headers: {
-        'Authorization': 'Bearer $token', // Update with your token
+      final response = await http.get(url, headers: {
+        'Authorization': 'Bearer $token',
       });
 
       if (response.statusCode == 200) {
-        var responseData = json.decode(response.body);
+        final responseData = json.decode(response.body);
 
-        // Check if responseData is a list, otherwise handle empty or unexpected response
         if (responseData is List<dynamic>) {
-          List<Relay> fetchedRelays = responseData.map((relay) {
-            return Relay(
-              id: relay['relay_id'].toString(), // Use 'relay_id'
-              name: relay['relay_name'],
-              isOn: relay['state'], // Use 'state' for relay status
-            );
-          }).toList();
-          if (mounted) {
-            setState(() {
-              relays = fetchedRelays; // Update UI with fetched relays
-              _isSelected = List.generate(relays.length, (index) => false);
-            });
-          }
-        } else {
-          // If it's not a list, handle it accordingly (e.g., no data)
           setState(() {
-            relays = []; // Set relays to an empty list
+            relays = responseData.map<Relay>((relay) {
+              return Relay(
+                id: relay['relay_id'].toString(),
+                name: relay['relay_name'],
+                isOn: relay['state'],
+              );
+            }).toList();
+
+            _isSelected = List.generate(relays.length, (_) => false);
+          });
+
+          await prefs.setString('relays', jsonEncode(responseData));
+        } else {
+          setState(() {
+            relays = [];
             _isSelected = [];
           });
-          logger.w("Unexpected response format: ${response.body}");
         }
       } else {
         logger.w("Failed to fetch relays: ${response.body}");
@@ -243,7 +250,8 @@ class _RelayScreenState extends State<RelayScreen> {
     final prefs = await SharedPreferences.getInstance();
     var token = prefs.getString('accessToken')!;
     final baseUrl = dotenv.env['API_BASE_URL']!;
-    final url = Uri.parse('http://$baseUrl/relay/add');
+    final cabinetId = prefs.getString('selectedCabinetId')!;
+    final url = Uri.parse('http://$baseUrl/relay/$cabinetId/add');
 
     try {
       Map<String, dynamic> requestBody = {
@@ -301,7 +309,8 @@ class _RelayScreenState extends State<RelayScreen> {
     final prefs = await SharedPreferences.getInstance();
     var token = prefs.getString('accessToken')!;
     final baseUrl = dotenv.env['API_BASE_URL']!;
-    final url = Uri.parse('http://$baseUrl/relay/set-status');
+    final cabinetId = prefs.getString('selectedCabinetId')!;
+    final url = Uri.parse('http://$baseUrl/relay/$cabinetId/set-status');
 
     logger.i("Setting status for relay $relayId to ${state ? 'ON' : 'OFF'}");
 
@@ -375,7 +384,8 @@ class _RelayScreenState extends State<RelayScreen> {
     final prefs = await SharedPreferences.getInstance();
     var token = prefs.getString('accessToken')!;
     final baseUrl = dotenv.env['API_BASE_URL']!;
-    final url = Uri.parse('http://$baseUrl/relay/set');
+    final cabinetId = prefs.getString('selectedCabinetId')!;
+    final url = Uri.parse('http://$baseUrl/relay/$cabinetId/set');
 
     try {
       Map<String, dynamic> requestBody = {
@@ -437,7 +447,8 @@ class _RelayScreenState extends State<RelayScreen> {
     final prefs = await SharedPreferences.getInstance();
     var token = prefs.getString('accessToken')!;
     final baseUrl = dotenv.env['API_BASE_URL']!;
-    final url = Uri.parse('http://$baseUrl/relay/delete');
+    final cabinetId = prefs.getString('selectedCabinetId')!;
+    final url = Uri.parse('http://$baseUrl/relay/$cabinetId/delete');
 
     try {
       Map<String, dynamic> requestBody = {
@@ -600,14 +611,14 @@ class _RelayScreenState extends State<RelayScreen> {
     );
   }
 
-  void _toggleSelectMode() {
-    setState(() {
-      // _isAddToHomeMode = false;
-      // _selectMode = !_selectMode;
-      flatToggleSelect = !flatToggleSelect;
-      _isSelected = List.generate(relays.length, (_) => flatToggleSelect);
-    });
-  }
+  // void _toggleSelectMode() {
+  //   setState(() {
+  //     // _isAddToHomeMode = false;
+  //     // _selectMode = !_selectMode;
+  //     flatToggleSelect = !flatToggleSelect;
+  //     _isSelected = List.generate(relays.length, (_) => flatToggleSelect);
+  //   });
+  // }
 
   void _toggleDeleteMode() {
     setState(() {
@@ -851,15 +862,142 @@ class _RelayScreenState extends State<RelayScreen> {
     );
   }
 
+  // @override
+  // Widget build(BuildContext context) {
+  //   return Scaffold(
+  //     drawer: const Navbar_left(),
+  //     appBar: _buildAppBar(),
+  //     body: Stack(
+  //       children: [
+  //         Container(decoration: backgound_Color()),
+  //         _buildRelayList(),
+  //         if (_isAddToHomeMode)
+  //           Positioned(
+  //             bottom: 20,
+  //             left: 20,
+  //             child: FloatingActionButton.extended(
+  //               onPressed: _confirmAddToHome,
+  //               label: const Text('Add to home'),
+  //               icon: const Icon(Icons.home_work_sharp),
+  //               backgroundColor: Colors.blueAccent,
+  //             ),
+  //           )
+  //         else if (_showDeleteIcon)
+  //           Positioned(
+  //             bottom: 20,
+  //             left: 20,
+  //             child: FloatingActionButton.extended(
+  //               onPressed: _confirmDeleteRelays,
+  //               label: const Text('Delete'),
+  //               icon: const Icon(Icons.delete_sharp),
+  //               backgroundColor: Colors.blueAccent,
+  //             ),
+  //           ),
+  //       ],
+  //     ),
+  //     floatingActionButton: _buildSpeedDial(),
+  //   );
+  // }
+
   @override
   Widget build(BuildContext context) {
+    final isMobile = Responsive.isMobile(context);
+    final isDesktop = Responsive.isDesktop(context);
+    final bool isRowLayout = isDesktop;
+
     return Scaffold(
       drawer: const Navbar_left(),
-      appBar: _buildAppBar(),
       body: Stack(
         children: [
-          Container(decoration: backgound_Color()),
-          _buildRelayList(),
+          Container(
+            height: isRowLayout ? MediaQuery.of(context).size.height : null,
+            decoration: backgound_Color(),
+            child: Padding(
+              padding: EdgeInsets.only(right: isMobile ? 0.0 : 50.0),
+              child: isRowLayout
+                  ? Row(
+                      children: [
+                        // ------ SIDEBAR GIỐNG HOME ------
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(10, 10, 0, 10),
+                          child: SizedBox(
+                            width: 300,
+                            height: MediaQuery.of(context).size.height,
+                            child: const Navbar_left(),
+                          ),
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 10),
+                          child: VerticalDivider(
+                            width: 1,
+                            thickness: 2,
+                            color: Color.fromARGB(255, 17, 163, 212),
+                            indent: 20,
+                            endIndent: 20,
+                          ),
+                        ),
+
+                        // ------ VÙNG NỘI DUNG CHÍNH ------
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                const SizedBox(height: 16), // cách appbar / top 1 chút
+
+                                // ✅ thanh tiêu đề chiếm hết hàng
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                  child: _buildRelayTitleBar(),
+                                ),
+
+                                const SizedBox(height: 12),
+
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(
+                                      right: 16.0,
+                                      left: 16.0,
+                                      bottom: 16.0,
+                                    ),
+                                    child: _buildRelayList(),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  // ====== MOBILE: CHỈ CÓ LIST, NAVBAR MỞ BẰNG ICON ======
+                  : Column(
+                children: [
+                  const SizedBox(height: 90),
+
+                  // ✅ title bar chiếm hết hàng trên mobile
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                    child: _buildRelayTitleBar(),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: _buildRelayList(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // NÚT MENU MOBILE (giống Home)
+          const navbarleft_set(),
+
+          // FAB góc trái dưới (delete / addToHome)
           if (_isAddToHomeMode)
             Positioned(
               bottom: 20,
@@ -874,19 +1012,42 @@ class _RelayScreenState extends State<RelayScreen> {
           else if (_showDeleteIcon)
             Positioned(
               bottom: 20,
-              left: 20,
-              child: FloatingActionButton.extended(
-                onPressed: _confirmDeleteRelays,
-                label: const Text('Delete'),
-                icon: const Icon(Icons.delete_sharp),
-                backgroundColor: Colors.blueAccent,
+              left: MediaQuery.of(context).size.width / 2 - 95,
+              child: Container(
+                decoration: BoxDecoration(
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.red.withOpacity(0.4),
+                      blurRadius: 12,
+                      spreadRadius: 2,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: FloatingActionButton.extended(
+                  onPressed: _confirmDeleteRelays,
+                  label: const Text(
+                    'DELETE',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                  icon: const Icon(Icons.delete_forever_rounded),
+                  backgroundColor: Colors.red,
+                  elevation: 10,
+                ),
               ),
             ),
         ],
       ),
+
+      // SpeedDial giữ nguyên như trước
       floatingActionButton: _buildSpeedDial(),
     );
   }
+
+
 
   // Reset everything to normal mode
   void _resetToNormalMode() {
@@ -898,45 +1059,45 @@ class _RelayScreenState extends State<RelayScreen> {
     });
   }
 
-  PreferredSize _buildAppBar() {
-    return PreferredSize(
-      preferredSize: const Size.fromHeight(kToolbarHeight), // Set AppBar height
-      child: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color.fromARGB(255, 255, 255, 255),
-              Color.fromARGB(255, 255, 255, 255)
-            ], // Gradient colors
-            begin: Alignment.topLeft, // Start point of the gradient
-            end: Alignment.bottomRight, // End point of the gradient
-          ),
-        ),
-        child: AppBar(
-          title: const Text(
-            'Relay',
-          ),
-          actions: [
-            if (_showEditIcon || _isAddToHomeMode)
-              IconButton(
-                icon: const Icon(Icons.cancel,
-                    color: Color.fromARGB(255, 255, 255, 255)),
-                onPressed: _resetToNormalMode,
-              )
-            else if (_showDeleteIcon)
-              IconButton(
-                icon: const Icon(Icons.check_box_outlined),
-                onPressed: _toggleSelectMode,
-              ),
-          ],
-          backgroundColor: Colors
-              .transparent, // Set to transparent because gradient is applied to Container
-          elevation:
-              0, // Remove elevation as the gradient is handling the visual effect
-        ),
-      ),
-    );
-  }
+  // PreferredSize _buildAppBar() {
+  //   return PreferredSize(
+  //     preferredSize: const Size.fromHeight(kToolbarHeight), // Set AppBar height
+  //     child: Container(
+  //       decoration: const BoxDecoration(
+  //         gradient: LinearGradient(
+  //           colors: [
+  //             Color.fromARGB(255, 255, 255, 255),
+  //             Color.fromARGB(255, 255, 255, 255)
+  //           ], // Gradient colors
+  //           begin: Alignment.topLeft, // Start point of the gradient
+  //           end: Alignment.bottomRight, // End point of the gradient
+  //         ),
+  //       ),
+  //       child: AppBar(
+  //         title: const Text(
+  //           'Relay',
+  //         ),
+  //         actions: [
+  //           if (_showEditIcon || _isAddToHomeMode)
+  //             IconButton(
+  //               icon: const Icon(Icons.cancel,
+  //                   color: Color.fromARGB(255, 255, 255, 255)),
+  //               onPressed: _resetToNormalMode,
+  //             )
+  //           else if (_showDeleteIcon)
+  //             IconButton(
+  //               icon: const Icon(Icons.check_box_outlined),
+  //               onPressed: _toggleSelectMode,
+  //             ),
+  //         ],
+  //         backgroundColor: Colors
+  //             .transparent, // Set to transparent because gradient is applied to Container
+  //         elevation:
+  //             0, // Remove elevation as the gradient is handling the visual effect
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Widget _buildRelayList() {
     var screenWidth = MediaQuery.of(context).size.width;
@@ -1288,3 +1449,52 @@ class _RelayScreenState extends State<RelayScreen> {
     );
   }
 }
+
+Widget _buildRelayTitleBar() {
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+    decoration: BoxDecoration(
+      gradient: const LinearGradient(
+        colors: [
+          Color(0xFF1565C0),
+          Color(0xFF42A5F5),
+        ],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      borderRadius: BorderRadius.circular(18),
+      boxShadow: const [
+        BoxShadow(
+          color: Colors.black26,
+          blurRadius: 8,
+          offset: Offset(0, 4),
+        ),
+      ],
+    ),
+
+    // ✅ CANH GIỮA TOÀN BỘ NỘI DUNG
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.max,
+      children: const [
+        Icon(
+          Icons.electrical_services_rounded,
+          color: Colors.white,
+          size: 30,
+        ),
+        SizedBox(width: 12),
+        Text(
+          'RELAY PAGE',
+          style: TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 2,
+            color: Colors.white,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+

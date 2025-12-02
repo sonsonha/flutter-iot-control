@@ -10,12 +10,16 @@ import 'package:frontend_daktmt/pages/relay/relay.dart';
 import 'package:frontend_daktmt/pages/schedule/schedule.dart';
 import 'package:frontend_daktmt/pages/setting/setting.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:frontend_daktmt/pages/cabinet/cabinet.dart';
+
 
 Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load();
-  startRefreshTokenTimer((dynamic homeScreenKey) {
-    homeScreenKey.currentState?.fetchSensorData();
-  });
+  startRefreshTokenTimer();  
+  // startRefreshTokenTimer((dynamic homeScreenKey) {
+  //   homeScreenKey.currentState?.fetchSensorData();
+  // });
   runApp(const MyApp());
 }
 
@@ -34,6 +38,7 @@ class _MyAppState extends State<MyApp> {
       routes: {
         '/': (context) => const SignIn(),
         '/signin': (context) => const SignIn(),
+        '/cabinet': (context) => const CabinetScreen(),
         '/home': (context) => const HomeScreen(),
         '/register': (context) => const Register(),
         '/forget-password': (context) => const Forget(),

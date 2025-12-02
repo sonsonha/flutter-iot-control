@@ -48,58 +48,45 @@ class _ToggleState extends State<toggle> {
     fetchHomeRelays();
   }
 
-  // Future<void> fetchHomeRelays() async {
-  //   SharedPreferences prefs = await SharedPreferences.getInstance();
-  //   final responseData = prefs.getString('relays_home');
-
-  //   if (responseData != null) {
-  //     try {
-  //       final decodedData = json.decode(responseData);
-  //       if (decodedData is List) {
-  //         setState(() {
-  //           homeRelays = decodedData
-  //               .map<Relay>((relayJson) => Relay.fromJson(relayJson))
-  //               .toList();
-  //         });
-  //       }
-  //     } catch (e) {
-  //       logger.e("Error parsing relays_home data: $e");
-  //     }
-  //   } else {
-  //     logger.i("No relays_home data found.");
-  //   }
-  // }
-
-    Future<void> fetchHomeRelays() async {
-    final prefs = await SharedPreferences.getInstance();
-    var token = prefs.getString('accessToken')!;
-    final baseUrl = dotenv.env['API_BASE_URL']!;
-    final url = Uri.parse('http://$baseUrl/relay/get-home');
+  Future<void> fetchHomeRelays() async {
     try {
-      var response = await http.get(
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('accessToken');
+      final cabinetId = prefs.getString('selectedCabinetId');
+
+      if (token == null || cabinetId == null) {
+        logger.w('Missing token or selectedCabinetId when fetchHomeRelays');
+        return;
+      }
+
+      final baseUrl = dotenv.env['API_BASE_URL']!;
+      final url = Uri.parse('http://$baseUrl/relay/$cabinetId/get-home');
+
+      final response = await http.get(
         url,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token'
+          'Authorization': 'Bearer $token',
         },
       );
 
       if (response.statusCode == 200) {
-        var data = json.decode(response.body);
+        final data = json.decode(response.body);
         if (data is List<dynamic>) {
-          List<Relay> fetchedRelays = data.map((relay) {
+          final fetchedRelays = data.map<Relay>((relay) {
             return Relay(
               id: relay['relay_id'],
               name: relay['relay_name'],
               isOn: relay['state'],
             );
           }).toList();
-          if (mounted) {
-            setState(() {
-              homeRelays = fetchedRelays;
-            });
-          }
+
+          if (!mounted) return;
+          setState(() {
+            homeRelays = fetchedRelays;
+          });
         } else {
+          if (!mounted) return;
           setState(() {
             homeRelays = [];
           });
@@ -173,10 +160,9 @@ class OnOffSwitch extends StatelessWidget {
               fontSize: 20.0,
               color: Color.fromARGB(255, 42, 5, 113),
             ),
-            overflow:
-                TextOverflow.ellipsis, // Adds "..." if the text is too long
-            maxLines: 1, // Limits to a single line
-            softWrap: false, // Prevents wrapping to a new line
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+            softWrap: false,
           ),
           const SizedBox(height: 2),
           Text(

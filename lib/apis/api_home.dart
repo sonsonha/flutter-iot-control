@@ -1,18 +1,17 @@
 import 'dart:convert';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:frontend_daktmt/pages/home/home.dart';
-import 'package:http/http.dart'
-    as http; // Import HTTP package for making requests
-import 'package:shared_preferences/shared_preferences.dart'; // Import for storing data
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:latlong2/latlong.dart';
 
-Future<double> fetchHumidityData(String token) async {
+// Lấy độ ẩm hiện tại
+Future<double> fetchHumidityData(String token, String cabinetId) async {
   try {
     final baseUrl = dotenv.env['API_BASE_URL']!;
-
     final response = await http.get(
-      Uri.parse('http://$baseUrl/sensor/get/humi'),
+      Uri.parse('http://$baseUrl/sensor/$cabinetId/get/humi'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
@@ -22,10 +21,10 @@ Future<double> fetchHumidityData(String token) async {
     if (response.statusCode == 200) {
       final result = json.decode(response.body);
 
-      double humidity = result['data']; // Lấy giá trị độ ẩm (double)
+      final double humidity = (result['data'] as num).toDouble();
 
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setDouble('humidity', humidity); // Lưu độ ẩm dưới dạng double
+      await prefs.setDouble('humidity', humidity);
 
       return humidity;
     } else {
@@ -35,14 +34,15 @@ Future<double> fetchHumidityData(String token) async {
   } catch (error) {
     logger.e('Error fetching humidity data: $error');
   }
-  return 0.0; // Trả về giá trị mặc định nếu có lỗi
+  return 0.0;
 }
 
-Future<double> fetchTemperatureData(String token) async {
+// Lấy nhiệt độ hiện tại
+Future<double> fetchTemperatureData(String token, String cabinetId) async {
   try {
     final baseUrl = dotenv.env['API_BASE_URL']!;
     final response = await http.get(
-      Uri.parse('http://$baseUrl/sensor/get/temp'),
+      Uri.parse('http://$baseUrl/sensor/$cabinetId/get/temp'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
@@ -52,13 +52,12 @@ Future<double> fetchTemperatureData(String token) async {
     if (response.statusCode == 200) {
       final result = json.decode(response.body);
 
-      double temperature = result['data']; // Lấy giá trị nhiệt độ (double)
+      final double temperature = (result['data'] as num).toDouble();
 
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setDouble(
-          'temperature', temperature); // Lưu nhiệt độ dưới dạng double
+      await prefs.setDouble('temperature', temperature);
 
-      return temperature; // Trả về giá trị nhiệt độ dạng double
+      return temperature;
     } else {
       final result = json.decode(response.body);
       logger.e('Error: ${result['error']}');
@@ -66,57 +65,81 @@ Future<double> fetchTemperatureData(String token) async {
   } catch (error) {
     logger.e('Error fetching temperature data: $error');
   }
-  return 0.0; // Trả về giá trị mặc định nếu có lỗi
+  return 0.0;
 }
 
-Future<LatLng> fetchLocationData(String token) async {
+// Lấy vị trí hiện tại
+Future<LatLng> fetchLocationData(String token, String cabinetId) async {
   try {
-    final baseUrl = dotenv
-        .env['API_BASE_URL']!; // Fetch the base URL from environment variables
+    final baseUrl = dotenv.env['API_BASE_URL']!;
     final response = await http.get(
-      Uri.parse('http://$baseUrl/sensor/get/location'), // Construct the API URL
+      Uri.parse('http://$baseUrl/sensor/$cabinetId/get/location'),
       headers: {
-        'Content-Type': 'application/json', // Set the content type to JSON
-        'Authorization': 'Bearer $token', // Include the token in the header
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
       },
     );
+
     if (response.statusCode == 200) {
       final result = json.decode(response.body);
 
-      // Sử dụng double.parse() để chuyển chuỗi sang số thập phân
-      final double latitude =
-          double.parse(result['X']); // Chuyển đổi chuỗi 'X' thành double
-      final double longitude =
-          double.parse(result['Y']); // Chuyển đổi chuỗi 'Y' thành double
+      final double latitude = double.parse(result['X']);
+      final double longitude = double.parse(result['Y']);
+
       final prefs = await SharedPreferences.getInstance();
       await prefs.setDouble('X', latitude);
-      await prefs.setDouble('Y', latitude);
+      await prefs.setDouble('Y', longitude);
+
       return LatLng(latitude, longitude);
+    } else if (response.statusCode == 404) {
+      // ✅ Không có location → dùng default, không log error nữa
+      logger.w('No location data for this cabinet, using default location');
+      const double defaultLat = 10.8797474;
+      const double defaultLng = 106.8064651;
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble('X', defaultLat);
+      await prefs.setDouble('Y', defaultLng);
+
+      return const LatLng(defaultLat, defaultLng);
     } else {
       final result = json.decode(response.body);
-      logger.e('Error from API location: ${result['error']}'); // In lỗi từ API
+      logger.e('Error from API location: ${result['error']}');
     }
   } catch (error) {
-    logger
-        .e('Error fetching location data: $error'); // Log any errors that occur
+    logger.e('Error fetching location data: $error');
   }
 
+  // fallback an toàn
   return const LatLng(0.00, 0.00);
 }
+
+
+/// =======================
+///   HISTORY – CHART API
+/// =======================
 
 Future<List<Map<String, dynamic>>> fetchloghumidata(int time) async {
   try {
     final prefs = await SharedPreferences.getInstance();
-    var token = prefs.getString('accessToken')!;
+
+    final String? token = prefs.getString('accessToken');
+    final String? cabinetId = prefs.getString('selectedCabinetId');
+
+    if (token == null || cabinetId == null) {
+      logger.e('Missing token or cabinetId when fetchloghumidata');
+      return [];
+    }
+
     final baseUrl = dotenv.env['API_BASE_URL']!;
     final response = await http.post(
-      Uri.parse('http://$baseUrl/log/humi'),
+      Uri.parse('http://$baseUrl/log/$cabinetId/humi'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
       body: json.encode({
-        'time': time,
+        'time': time.toString(), // backend đang dùng string
       }),
     );
 
@@ -124,46 +147,58 @@ Future<List<Map<String, dynamic>>> fetchloghumidata(int time) async {
       List<dynamic> data = json.decode(response.body);
 
       return data.map((item) {
-        // Đảm bảo 'date' là DateTime hợp lệ
         DateTime date = DateTime.parse(item['date']);
-        double yValue = (item['value'] == null || item['value'] == '')
-            ? 0.0
-            : (item['value'] is String
-                ? double.tryParse(item['value']) ?? 0.0
-                : item['value']?.toDouble() ?? 0.0);
-        double xValue = (date.millisecondsSinceEpoch -
-                DateTime.parse(data.first['date']).millisecondsSinceEpoch) /
-            (1000 * 60 * 60 * 24);
 
+        double yValue;
+        final raw = item['value'];
+        if (raw == null || raw == '') {
+          yValue = 0.0;
+        } else if (raw is String) {
+          yValue = double.tryParse(raw) ?? 0.0;
+        } else if (raw is num) {
+          yValue = raw.toDouble();
+        } else {
+          yValue = 0.0;
+        }
+
+        // x sẽ được Chart convert lại theo index, nên tạm cho 0
         return {
-          'spot': FlSpot(xValue, yValue),
+          'spot': FlSpot(0, yValue),
           'date': date,
         };
       }).toList();
     } else {
       final result = json.decode(response.body);
       logger.e('Error log humidity: ${result['error']}');
-      throw Exception('Failed to load log humidata: ${result['error']}');
+      return [];
     }
   } catch (error) {
     logger.e('Error fetching log humidata: $error');
-    throw Exception('Error fetching log humidata');
+    return [];
   }
 }
 
 Future<List<Map<String, dynamic>>> fetchlogtempdata(int time) async {
   try {
     final prefs = await SharedPreferences.getInstance();
-    var token = prefs.getString('accessToken')!;
+
+    final String? token = prefs.getString('accessToken');
+    final String? cabinetId = prefs.getString('selectedCabinetId');
+
+    if (token == null || cabinetId == null) {
+      logger.e('Missing token or cabinetId when fetchlogtempdata');
+      return [];
+    }
+
     final baseUrl = dotenv.env['API_BASE_URL']!;
     final response = await http.post(
-      Uri.parse('http://$baseUrl/log/temp'),
+      Uri.parse('http://$baseUrl/log/$cabinetId/temp'),
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token', // Sử dụng token
+        'Authorization': 'Bearer $token',
       },
       body: json.encode({
-        'time': time,
+        'time': time.toString(),
       }),
     );
 
@@ -171,31 +206,32 @@ Future<List<Map<String, dynamic>>> fetchlogtempdata(int time) async {
       List<dynamic> data = json.decode(response.body);
 
       return data.map((item) {
-        // Đảm bảo 'date' là DateTime hợp lệ
-
         DateTime date = DateTime.parse(item['date']);
 
-        double yValue = (item['value'] == null || item['value'] == '')
-            ? 0.0
-            : (item['value'] is String
-                ? double.tryParse(item['value']) ?? 0.0
-                : item['value']?.toDouble() ?? 0.0);
-        double xValue = (date.millisecondsSinceEpoch -
-                DateTime.parse(data.first['date']).millisecondsSinceEpoch) /
-            (1000 * 60 * 60 * 24);
+        double yValue;
+        final raw = item['value'];
+        if (raw == null || raw == '') {
+          yValue = 0.0;
+        } else if (raw is String) {
+          yValue = double.tryParse(raw) ?? 0.0;
+        } else if (raw is num) {
+          yValue = raw.toDouble();
+        } else {
+          yValue = 0.0;
+        }
 
         return {
-          'spot': FlSpot(xValue, yValue),
+          'spot': FlSpot(0, yValue),
           'date': date,
         };
       }).toList();
     } else {
       final result = json.decode(response.body);
       logger.e('Error log Temperature: ${result['error']}');
-      throw Exception('Failed to load log tempedata: ${result['error']}');
+      return [];
     }
   } catch (error) {
     logger.e('Error fetching log tempedata: $error');
-    throw Exception('Error fetching log tempedata');
+    return [];
   }
 }

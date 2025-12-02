@@ -6,13 +6,18 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
 
 final Logger logger = Logger();
-Future<String?> fetchSignIn(TextEditingController emailController,
-    TextEditingController passwordController, BuildContext context) async {
+
+Future<String?> fetchSignIn(
+  TextEditingController emailController,
+  TextEditingController passwordController,
+  BuildContext context,
+) async {
   final baseUrl = dotenv.env['API_BASE_URL']!;
   final url = Uri.parse('http://$baseUrl/login');
 
   try {
-    String convertEmail = emailController.text.toLowerCase();
+    final convertEmail = emailController.text.toLowerCase();
+
     final response = await http.post(
       url,
       headers: {
@@ -23,45 +28,36 @@ Future<String?> fetchSignIn(TextEditingController emailController,
         'password': passwordController.text,
       }),
     );
+
     if (response.statusCode == 200) {
-      final jsonData = json.decode(response.body);
-      SharedPreferences prefs = await SharedPreferences.getInstance();
+      final jsonData = json.decode(response.body) as Map<String, dynamic>;
+
+      final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('isLoggedIn', true);
       await prefs.setString('accessToken', jsonData['accessToken']);
       await prefs.setString('refreshToken', jsonData['refreshToken']);
-      // Kiểm tra và xử lý giá trị của temperature
-      if (jsonData['temperature'] is double) {
-        await prefs.setDouble('temperature', jsonData['temperature']);
-      } else if (jsonData['temperature'] is String) {
-        jsonData['temperature'] =
-            double.tryParse(jsonData['temperature']) ?? 0.0;
-        await prefs.setDouble('temperature', jsonData['temperature']);
-      }
 
-      // Kiểm tra và xử lý giá trị của humidity
-      if (jsonData['humidity'] is double) {
-        await prefs.setDouble('humidity', jsonData['humidity']);
-      } else if (jsonData['humidity'] is String) {
-        jsonData['humidity'] = double.tryParse(jsonData['humidity']) ?? 0.0;
-        await prefs.setDouble('humidity', jsonData['humidity']);
-      }
+      // lưu thông tin user
+      await prefs.setString('profile', json.encode(jsonData['profile'] ?? {}));
 
-      await prefs.setString('location', jsonData['location']);
-      await prefs.setString('relays', json.encode(jsonData['relays']));
+      // lưu danh sách tủ (nếu muốn dùng lại sau)
       await prefs.setString(
-          'relays_home', json.encode(jsonData['relays_home']));
-      await prefs.setString('schedules', json.encode(jsonData['schedules']));
-      await prefs.setString(
-          'schedules_home', json.encode(jsonData['schedules_home']));
-      await prefs.setString('profile', json.encode(jsonData['profile']));
+        'cabinets',
+        json.encode(jsonData['cabinets'] ?? []),
+      );
 
+      // 👉 KHÔNG còn lưu temperature/humidity/relays/schedules ở đây nữa
+
+      // 👉 Điều hướng sang trang chọn tủ (ví dụ route: /cabinet-select)
+      //    anh đặt tên route sao thì sửa lại cho đúng
       // ignore: use_build_context_synchronously
-      Navigator.pushReplacementNamed(context, '/home');
+      Navigator.pushReplacementNamed(context, '/cabinet');
+
       return null;
     } else {
       final result = json.decode(response.body);
       logger.e('Error: ${result['error']}');
-      String errorMessage = result['error'] ?? 'Unknown error occurred.';
+      final String errorMessage = result['error'] ?? 'Unknown error occurred.';
       return errorMessage;
     }
   } catch (e) {
@@ -69,6 +65,7 @@ Future<String?> fetchSignIn(TextEditingController emailController,
     return 'Error fetching data: $e';
   }
 }
+
 
 Future<String> fetchRegister(
     TextEditingController fullname,

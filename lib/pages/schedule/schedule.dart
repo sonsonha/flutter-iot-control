@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:numberpicker/numberpicker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:frontend_daktmt/responsive.dart';
 // import 'dart:math' as math;
 
 class Relay {
@@ -135,7 +136,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     final prefs = await SharedPreferences.getInstance();
     var token = prefs.getString('accessToken')!;
     final baseUrl = dotenv.env['API_BASE_URL']!;
-    final url = Uri.parse('http://$baseUrl/schedule/get');
+    final cabinetId = prefs.getString('selectedCabinetId')!;
+    final url = Uri.parse('http://$baseUrl/schedule/$cabinetId/get');
 
     try {
       final response = await http.get(url, headers: {
@@ -196,81 +198,66 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     }
   }
 
-  Future<void> _addScheduleAPI(String scheduleName, List<String> day,
-      List<Map<String, dynamic>> actions) async {
-    final prefs = await SharedPreferences.getInstance();
-    var token = prefs.getString('accessToken')!;
-    final baseUrl = dotenv.env['API_BASE_URL']!;
-    final url = Uri.parse('http://$baseUrl/schedule/add');
-    // Collect selected days and relay actions
+Future<bool> _addScheduleAPI(
+  String scheduleName,
+  List<String> day,
+  List<Map<String, dynamic>> actions,
+) async {
+  final prefs = await SharedPreferences.getInstance();
+  var token = prefs.getString('accessToken')!;
+  final baseUrl = dotenv.env['API_BASE_URL']!;
 
-    String timeString = formatTimeOfDay(selectedTime);
-
-    Map<String, dynamic> requestBody = {
-      "schedule_name": _nameController.text,
-      "day": day,
-      "time": timeString,
-      "actions": actions,
-    };
-
-    try {
-      var response = await http.post(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token'
-        },
-        body: jsonEncode(requestBody),
-      );
-
-      if (response.statusCode == 200) {
-        print("Schedule added successfully");
-
-        // Đọc danh sách hiện tại từ SharedPreferences
-        String? schedulesHomeJson = prefs.getString('schedules_home');
-        List<dynamic> schedulesHomeData =
-            schedulesHomeJson != null ? jsonDecode(schedulesHomeJson) : [];
-
-        // Lấy ngày hiện tại
-        String currentDayName =
-            weekDayMapping[DateTime.now().weekday]!; // Lấy tên ngày hiện tại
-        print("yasuo: $schedulesHomeJson");
-        print("day: $day");
-        print("currentDayName: $currentDayName");
-
-        // Nếu ngày hiện tại nằm trong danh sách ngày đã chọn, thêm schedule vào `schedules_home`
-        if (day.contains(currentDayName)) {
-          schedulesHomeData.add({
-            "schedule_name": scheduleName,
-            "day": day,
-            "time": timeString,
-            "actions": actions,
-          });
-
-          // Lưu danh sách đã cập nhật vào SharedPreferences
-          await prefs.setString(
-              'schedules_home', jsonEncode(schedulesHomeData));
-          print("Updated schedules_home: $schedulesHomeData");
-        }
-
-        await fetchSchedulesAPI(); // Fetch updated schedules after adding
-      } else {
-        print("Failed to add schedule: ${response.body}");
-      }
-    } catch (e) {
-      print("Error adding schedule: $e");
-    }
+  final cabinetId = prefs.getString('selectedCabinetId');
+  if (cabinetId == null) {
+    print('Error: selectedCabinetId not found');
+    return false;
   }
 
-  static const Map<int, String> weekDayMapping = {
-    1: "Monday",
-    2: "Tuesday",
-    3: "Wednesday",
-    4: "Thursday",
-    5: "Friday",
-    6: "Saturday",
-    7: "Sunday",
+  final url = Uri.parse('http://$baseUrl/schedule/$cabinetId/add');
+
+  String timeString = formatTimeOfDay(selectedTime);
+
+  Map<String, dynamic> requestBody = {
+    "schedule_name": scheduleName,
+    "day": day,
+    "time": timeString,
+    "actions": actions,
   };
+
+  try {
+    var response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token'
+      },
+      body: jsonEncode(requestBody),
+    );
+
+    if (response.statusCode == 200) {
+      print("Schedule added successfully");
+      await fetchSchedulesAPI();
+      return true;
+    } else {
+      print("Failed to add schedule: ${response.body}");
+      return false;
+    }
+  } catch (e) {
+    print("Error adding schedule: $e");
+    return false;
+  }
+}
+
+
+  // static const Map<int, String> weekDayMapping = {
+  //   1: "Monday",
+  //   2: "Tuesday",
+  //   3: "Wednesday",
+  //   4: "Thursday",
+  //   5: "Friday",
+  //   6: "Saturday",
+  //   7: "Sunday",
+  // };
 
   TimeOfDay parseTimeString(String time) {
     try {
@@ -725,73 +712,88 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     return '$hour:$minute';
   }
 
-  Future<void> fetchRelaysAPI() async {
-    final prefs = await SharedPreferences.getInstance();
-    var token = prefs.getString('accessToken');
-    if (token == null) {
-      print("Error: Access token not found.");
-      return;
-    }
-
-    final baseUrl = dotenv.env['API_BASE_URL'];
-    if (baseUrl == null) {
-      print("Error: API_BASE_URL not set in environment.");
-      return;
-    }
-
-    final url = Uri.parse('http://$baseUrl/relay/get');
-
-    try {
-      var response = await http.get(
-        url,
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        var responseData = json.decode(response.body);
-
-        // Check if responseData is a list
-        if (responseData is List<dynamic> && responseData.isNotEmpty) {
-          List<Relay> fetchedRelays = responseData.map((relay) {
-            return Relay(
-              id: relay['relay_id'].toString(),
-              name: relay['relay_name'],
-              isOn: relay['state'],
-            );
-          }).toList();
-
-          setState(() {
-            relays = fetchedRelays;
-            _isSelectedRelays = List.generate(
-                relays.length, (index) => false); // Update selection
-          });
-        } else {
-          // Handle empty or unexpected response
-          setState(() {
-            relays = [];
-            _isSelectedRelays = [];
-          });
-          print("No relays available or unexpected response: ${response.body}");
-        }
-      } else {
-        // Handle non-200 responses
-        print("Failed to fetch relays: ${response.body}");
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text("Error fetching relays: ${response.statusCode}")),
-        );
-      }
-    } catch (e) {
-      // Handle network or JSON decoding errors
-      print("Error occurred: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text("An error occurred while fetching relays.")),
-      );
-    }
+Future<void> fetchRelaysAPI() async {
+  final prefs = await SharedPreferences.getInstance();
+  var token = prefs.getString('accessToken');
+  if (token == null) {
+    print("Error: Access token not found.");
+    return;
   }
+
+  final baseUrl = dotenv.env['API_BASE_URL'];
+  if (baseUrl == null) {
+    print("Error: API_BASE_URL not set in environment.");
+    return;
+  }
+
+  final cabinetId = prefs.getString('selectedCabinetId'); // nếu dùng theo tủ
+  if (cabinetId == null) {
+    print("Error: cabinetId not found in SharedPreferences.");
+    return;
+  }
+
+  final url = Uri.parse('http://$baseUrl/relay/$cabinetId/get');
+
+  try {
+    var response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      var responseData = json.decode(response.body);
+
+      // 👇 xử lý cả 2 kiểu: List trực tiếp hoặc { data: [...] }
+      List<dynamic>? relayList;
+
+      if (responseData is List) {
+        relayList = responseData;
+      } else if (responseData is Map<String, dynamic> &&
+          responseData['data'] is List) {
+        relayList = responseData['data'];
+      }
+
+      if (relayList != null && relayList.isNotEmpty) {
+        List<Relay> fetchedRelays = relayList.map((relay) {
+          return Relay(
+            id: relay['relay_id'].toString(),
+            name: relay['relay_name'],
+            isOn: relay['state'] ?? false,
+          );
+        }).toList();
+
+        setState(() {
+          relays = fetchedRelays;
+          _isSelectedRelays =
+              List.generate(relays.length, (index) => false); // sync length
+        });
+
+        print("Relays fetched for schedule dialog: ${relays.length}");
+      } else {
+        setState(() {
+          relays = [];
+          _isSelectedRelays = [];
+        });
+        print("No relays available (empty list). raw response: ${response.body}");
+      }
+    } else {
+      print("Failed to fetch relays: ${response.statusCode} - ${response.body}");
+      setState(() {
+        relays = [];
+        _isSelectedRelays = [];
+      });
+    }
+  } catch (e) {
+    print("Error occurred: $e");
+    setState(() {
+      relays = [];
+      _isSelectedRelays = [];
+    });
+  }
+}
+
 
   void _addSchedule() async {
     for (var day in _days) {
@@ -1118,7 +1120,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               }
             }
 
-            String relayName = _nameController.text;
+            String scheduleName = _nameController.text;
             List<Map<String, dynamic>> action = selectedRelays.map((relay) {
               return {
                 "relayId": relay.id,
@@ -1130,10 +1132,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 .map((entry) => entry.key)
                 .toList();
 
-            await _addScheduleAPI(relayName, selectedDaysList, action);
+            await _addScheduleAPI(scheduleName, selectedDaysList, action);
             Navigator.of(context).pop();
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("$relayName is relay added")),
+              SnackBar(content: Text("$scheduleName is added")),
             );
           }
         },
@@ -1182,14 +1184,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     });
   }
 
-  void _toggleSelectMode() {
-    setState(() {
-      // _isAddToHomeMode = false;
-      // _selectMode = !_selectMode;
-      flatToggleSelect = !flatToggleSelect;
-      _isSelected = List.generate(schedules.length, (_) => flatToggleSelect);
-    });
-  }
+  // void _toggleSelectMode() {
+  //   setState(() {
+  //     // _isAddToHomeMode = false;
+  //     // _selectMode = !_selectMode;
+  //     flatToggleSelect = !flatToggleSelect;
+  //     _isSelected = List.generate(schedules.length, (_) => flatToggleSelect);
+  //   });
+  // }
 
   void _resetToNormalMode() {
     setState(() {
@@ -1203,7 +1205,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     final prefs = await SharedPreferences.getInstance();
     var token = prefs.getString('accessToken')!;
     final baseUrl = dotenv.env['API_BASE_URL']!;
-    final url = Uri.parse('http://$baseUrl/schedule/set-status');
+    final cabinetId = prefs.getString('selectedCabinetId')!;
+    final url = Uri.parse('http://$baseUrl/schedule/$cabinetId/set-status');
     try {
       Map<String, dynamic> requestBody = {
         'schedule_id': scheduleId, // Adjusted to match Node.js API
@@ -1241,7 +1244,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     final prefs = await SharedPreferences.getInstance();
     var token = prefs.getString('accessToken')!;
     final baseUrl = dotenv.env['API_BASE_URL']!;
-    final url = Uri.parse('http://$baseUrl/schedule/set');
+    final cabinetId = prefs.getString('selectedCabinetId')!;
+    final url = Uri.parse('http://$baseUrl/schedule/$cabinetId/set');
     try {
       Map<String, dynamic> requestBody = {
         'schedule_id': scheduleId,
@@ -1276,7 +1280,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     final prefs = await SharedPreferences.getInstance();
     var token = prefs.getString('accessToken')!;
     final baseUrl = dotenv.env['API_BASE_URL']!;
-    final url = Uri.parse('http://$baseUrl/schedule/delete');
+    final cabinetId = prefs.getString('selectedCabinetId')!;
+    final url = Uri.parse('http://$baseUrl/schedule/$cabinetId/delete');
     try {
       Map<String, dynamic> requestBody = {
         'schedule_id': scheduleId,
@@ -1441,76 +1446,146 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           );
   }
 
-  PreferredSize _buildAppBar() {
-    return PreferredSize(
-      preferredSize: const Size.fromHeight(kToolbarHeight), // Set AppBar height
-      child: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color.fromARGB(60, 255, 255, 255),
-              Color.fromARGB(60, 255, 255, 255)
-            ], // Gradient colors
-            begin: Alignment.topLeft, // Start point of the gradient
-            end: Alignment.bottomRight, // End point of the gradient
-          ),
-        ),
-        child: AppBar(
-          title: const Text(
-            'Schedule',
-          ),
-          actions: [
-            if (_showEditIcon)
-              IconButton(
-                icon: const Icon(Icons.cancel,
-                    color: Color.fromARGB(255, 255, 255, 255)),
-                onPressed: _resetToNormalMode,
-              )
-            else if (_showDeleteIcon)
-              IconButton(
-                icon: const Icon(Icons.check_box_outlined),
-                onPressed: _toggleSelectMode,
-              ),
-          ],
-          backgroundColor: Colors
-              .transparent, // Set to transparent because gradient is applied to Container
-          elevation:
-              0, // Remove elevation as the gradient is handling the visual effect
-        ),
-      ),
-    );
-  }
+@override
+Widget build(BuildContext context) {
+  final isDesktop = Responsive.isDesktop(context);
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: _buildAppBar(),
-      drawer: const Navbar_left(),
-      body: Container(
-        decoration: backgound_Color(),
+  return Scaffold(
+    drawer: const Navbar_left(),
+    body: Stack(
+      children: [
+        // Nền
+        Container(decoration: backgound_Color()),
 
-        // Set background color of the body here
-        child: Stack(
-          children: [
-            _buildScheduleList(),
-            if (_showDeleteIcon)
-              Positioned(
-                bottom: 20,
-                left: 20,
-                child: FloatingActionButton.extended(
-                  onPressed: _confirmDeleteSchedules,
-                  label: const Text('Delete'),
-                  icon: const Icon(Icons.delete_sharp),
-                  backgroundColor: Colors.blueAccent,
+        // Nút 3 gạch cho mobile
+        const navbarleft_set(),
+
+        SafeArea(
+          child: isDesktop
+              ? Row(
+                  children: [
+                    // Navbar trái trên desktop
+                    SizedBox(
+                      width: 260,
+                      child: const Navbar_left(),
+                    ),
+                    const VerticalDivider(
+                      width: 1,
+                      thickness: 1,
+                      color: Colors.black26,
+                    ),
+                    // Nội dung
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                        child: Column(
+                          children: [
+                            _buildScheduleTitleBar(),
+                            const SizedBox(height: 16),
+                            Expanded(child: _buildScheduleList()),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              : Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 70), // chừa chỗ cho nút 3 gạch
+                      _buildScheduleTitleBar(),
+                      const SizedBox(height: 16),
+                      Expanded(child: _buildScheduleList()),
+                    ],
+                  ),
                 ),
-              ),
-            // _buildGridView(crossAxisCount, childAspectRatio),
-          ],
         ),
+
+        if (_showDeleteIcon)
+          Positioned(
+            bottom: 20,
+            left: MediaQuery.of(context).size.width / 2 - 95,
+            child: Container(
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.red.withOpacity(0.4),
+                    blurRadius: 12,
+                    spreadRadius: 2,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: FloatingActionButton.extended(
+                onPressed: _confirmDeleteSchedules,
+                label: const Text(
+                  'DELETE',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+                icon: const Icon(Icons.delete_forever_rounded),
+                backgroundColor: Colors.red,
+                elevation: 10,
+              ),
+            ),
+          ),
+      ],
+    ),
+    floatingActionButton: _buildSpeedDial(),
+  );
+}
+
+
+
+  Widget _buildScheduleTitleBar() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFF1565C0),
+            Color(0xFF42A5F5),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 8,
+            offset: Offset(0, 4),
+          ),
+        ],
       ),
-      floatingActionButton: _buildSpeedDial(),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center, // chữ nằm giữa
+        mainAxisSize: MainAxisSize.max,
+        children: const [
+          Icon(
+            Icons.schedule_rounded,
+            color: Colors.white,
+            size: 30,
+          ),
+          SizedBox(width: 12),
+          Text(
+            'SCHEDULE PAGE',
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 2,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
     );
   }
+
 
   Widget _buildScheduleCard(int index) {
     Color backgroundColor = schedules[index].isOn

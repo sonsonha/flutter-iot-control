@@ -1,6 +1,9 @@
+import 'dart:async'; // 👈 thêm
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend_daktmt/apis/api_refreshtoken.dart';
+import 'package:frontend_daktmt/apis/api_home.dart'; // 👈 thêm
 import 'package:frontend_daktmt/custom_card.dart';
 import 'package:frontend_daktmt/pages/home/widget/chart.dart';
 import 'package:frontend_daktmt/pages/home/widget/map.dart';
@@ -8,10 +11,10 @@ import 'package:frontend_daktmt/pages/home/widget/toggle.dart';
 import 'package:frontend_daktmt/responsive.dart';
 import 'package:frontend_daktmt/nav_bar/nav_bar_left.dart';
 import 'package:frontend_daktmt/nav_bar/nav_bar_right.dart';
-// import 'package:latlong2/latlong.dart';
+import 'package:latlong2/latlong.dart'; // 👈 dùng cho fetchLocationData
+// import 'package:frontend_daktmt/widgets/cabinet_selector_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'widget/gauge.dart';
-// import 'package:frontend_daktmt/apis/api_page.dart';
 import 'package:frontend_daktmt/pages/noitification/noitification.dart';
 import 'package:logger/logger.dart';
 
@@ -36,60 +39,119 @@ class _HomeScreenState extends State<HomeScreen> {
   List<String> dates = [];
   bool loading = true;
 
+  Timer? _sensorTimer; // 👈 timer tự update sau 10 phút
+
   @override
   void initState() {
     super.initState();
-    // fetchRefreshToken();
+    // Load nhanh từ SharedPreferences (overview sau khi chọn tủ)
+    _loadFromPrefsOnce();
+
+    // Gọi API lần đầu để có dữ liệu mới nhất
     fetchSensorData();
-    startRefreshTokenTimer(fetchSensorData);
+
+    // Timer refresh token toàn app (trong api_refreshtoken.dart)
+    startRefreshTokenTimer();
+
+    // Tự động gọi API sensor mỗi 10 phút
+    _sensorTimer = Timer.periodic(const Duration(minutes: 10), (timer) {
+      fetchSensorData();
+    });
   }
 
-  Future<void> fetchSensorData() async {
-    logger.i("Fetching sensor data started");
-    try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
+  @override
+  void dispose() {
+    _sensorTimer?.cancel();
+    super.dispose();
+  }
 
-      token = prefs.getString('accessToken')!;
-      double humidityData = prefs.getDouble('humidity') ?? 0.0;
-      double temperatureData = prefs.getDouble('temperature') ?? 0.0;
-      // print("TOKEN IN HOMESCREEN BEFORE CHART: $token");
+  /// Lần đầu vào Home: đọc dữ liệu đã lưu sẵn từ SharedPreferences
+  Future<void> _loadFromPrefsOnce() async {
+    logger.i("Loading sensor data from SharedPreferences");
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      token = prefs.getString('accessToken') ?? '';
+      final double humidityData = prefs.getDouble('humidity') ?? 0.0;
+      final double temperatureData = prefs.getDouble('temperature') ?? 0.0;
 
       String? savedLocation = prefs.getString('location');
       if (savedLocation == null || savedLocation.isEmpty) {
         logger
-            .w("No location found in SharedPreferences. Using default value.");
+            .w("No location in SharedPreferences. Using default value (Thu Duc).");
         savedLocation = "10.8797474-106.8064651";
       }
 
-      List<String> coordinates = savedLocation.split('-');
+      final List<String> coordinates = savedLocation.split('-');
+      double fetchedLatitude = 0.0;
+      double fetchedLongitude = 0.0;
+
       if (coordinates.length == 2) {
-        double fetchedLatitude = double.tryParse(coordinates[0]) ?? 0.0;
-        double fetchedLongitude = double.tryParse(coordinates[1]) ?? 0.0;
-        if (mounted) {
-          setState(() {
-            humidity = humidityData;
-            temperature = temperatureData;
-            latitude = fetchedLatitude;
-            longitude = fetchedLongitude;
-          });
-        }
+        fetchedLatitude = double.tryParse(coordinates[0]) ?? 0.0;
+        fetchedLongitude = double.tryParse(coordinates[1]) ?? 0.0;
       } else {
-        logger.e("Invalid location format: $savedLocation");
+        logger.e("Invalid location format in prefs: $savedLocation");
       }
+
+      if (!mounted) return;
+      setState(() {
+        humidity = humidityData;
+        temperature = temperatureData;
+        latitude = fetchedLatitude;
+        longitude = fetchedLongitude;
+      });
     } catch (error) {
-      logger.e("Error fetching sensor data: $error");
+      logger.e("Error loading sensor data from prefs: $error");
+    }
+  }
+
+  /// Gọi API theo cabinetId hiện tại, sau đó cập nhật state + prefs
+  Future<void> fetchSensorData() async {
+    logger.i("Fetching sensor data from API started");
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      token = prefs.getString('accessToken') ?? '';
+      final String? cabinetId = prefs.getString('selectedCabinetId');
+
+      if (token.isEmpty || cabinetId == null) {
+        logger.w(
+            "Missing token or selectedCabinetId. token: ${token.isNotEmpty}, cabinetId: $cabinetId");
+        return;
+      }
+
+      // Gọi 3 API song song
+      final results = await Future.wait([
+        fetchHumidityData(token, cabinetId),
+        fetchTemperatureData(token, cabinetId),
+        fetchLocationData(token, cabinetId),
+      ]);
+
+      final double newHumidity = results[0] as double;
+      final double newTemperature = results[1] as double;
+      final LatLng newLocation = results[2] as LatLng;
+
+      if (!mounted) return;
+      setState(() {
+        humidity = newHumidity;
+        temperature = newTemperature;
+        latitude = newLocation.latitude;
+        longitude = newLocation.longitude;
+      });
+    } catch (error) {
+      logger.e("Error fetching sensor data from API: $error");
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    
     final isMobile = Responsive.isMobile(context);
     final isDesktop = Responsive.isDesktop(context);
     final double gaugeHeight = isMobile ? 200.0 : 150.0;
     final double gaugeWidth = isMobile ? double.infinity : 100.0;
     final bool isRowLayout = isDesktop;
     final screenWidth = MediaQuery.of(context).size.width;
+
     return Scaffold(
       drawer: const Navbar_left(),
       endDrawer: const Navbar_right(
@@ -109,16 +171,16 @@ class _HomeScreenState extends State<HomeScreen> {
                           Padding(
                             padding: const EdgeInsets.fromLTRB(10, 10, 0, 10),
                             child: SizedBox(
-                                width: 300,
-                                height: MediaQuery.of(context).size.height,
-                                child: const Navbar_left()),
+                              width: 300,
+                              height: MediaQuery.of(context).size.height,
+                              child: const Navbar_left(),
+                            ),
                           ),
                           const Padding(
                             padding: EdgeInsets.symmetric(horizontal: 10),
                             child: VerticalDivider(
                               width: 1,
                               thickness: 2,
-                              // color: Color.fromARGB(255, 202, 202, 202),
                               color: Color.fromARGB(255, 17, 163, 212),
                               indent: 20,
                               endIndent: 20,
@@ -130,10 +192,14 @@ class _HomeScreenState extends State<HomeScreen> {
                               child: Column(
                                 children: [
                                   const SizedBox(height: 70),
-                                  Expanded(
-                                    // Thêm Expanded ở đây
+                                    // CabinetSelectorBar(
+                                    //     onCabinetChanged: (id, name) {
+                                    //       // Khi đổi tủ -> gọi lại fetchSensorData (đã đọc từ SharedPreferences)
+                                    //       fetchSensorData();
+                                    //     },
+                                    //   ),
+                                    Expanded(
                                     child: SingleChildScrollView(
-                                      // Bọc Column trong SingleChildScrollView
                                       child: Column(
                                         children: [
                                           Row(
@@ -144,12 +210,16 @@ class _HomeScreenState extends State<HomeScreen> {
                                                   children: [
                                                     toggle(
                                                       toggleHeight: 150.0,
-                                                      toggleWidth: screenWidth * 0.44,
+                                                      toggleWidth:
+                                                          screenWidth * 0.44,
                                                       numOfRelay: 6,
                                                     ),
-                                                    latitude == 0.0 && longitude == 0.0
+                                                    latitude == 0.0 &&
+                                                            longitude == 0.0
                                                         ? const Center(
-                                                            child: CircularProgressIndicator())
+                                                            child:
+                                                                CircularProgressIndicator(),
+                                                          )
                                                         : map(
                                                             mapHeight: 350.0,
                                                             mapWidth: 1000,
@@ -212,6 +282,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     : Column(
                         children: [
                           const SizedBox(height: 100.0),
+                            // CabinetSelectorBar(
+                            //   onCabinetChanged: (id, name) {
+                            //     fetchSensorData();
+                            //   },
+                            // ),
                           const toggle(
                             toggleHeight: 270.0,
                             toggleWidth: 350.0,
@@ -243,7 +318,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 const SizedBox(height: 20),
                                 latitude == 0.0 && longitude == 0.0
                                     ? const Center(
-                                        child: CircularProgressIndicator())
+                                        child: CircularProgressIndicator(),
+                                      )
                                     : map(
                                         mapHeight: 350.0,
                                         mapWidth: 1000,

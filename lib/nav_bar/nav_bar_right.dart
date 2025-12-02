@@ -97,9 +97,17 @@ class _nabarright_setState extends State<nabarright_set> {
 
   Future<void> fetchSchedulesAPI(String day) async {
     final prefs = await SharedPreferences.getInstance();
-    var token = prefs.getString('accessToken')!;
+    final String? token = prefs.getString('accessToken');
+    final String? cabinetId = prefs.getString('selectedCabinetId');
+
+    if (token == null || cabinetId == null) {
+      print("❌ Missing token or selectedCabinetId");
+      return;
+    }
+
     final baseUrl = dotenv.env['API_BASE_URL']!;
-    final url = Uri.parse('http://$baseUrl/schedule/get-home');
+    final url =
+        Uri.parse('http://$baseUrl/schedule/$cabinetId/get-home');
 
     Map<String, dynamic> requestBody = {
       "day": day,
@@ -120,23 +128,28 @@ class _nabarright_setState extends State<nabarright_set> {
 
         if (responseData is List) {
           List<Schedule> fetchedSchedules = responseData
-              .map<Schedule>((scheduleJson) => Schedule.fromJson(scheduleJson))
+              .map<Schedule>(
+                  (scheduleJson) => Schedule.fromJson(scheduleJson))
               .toList();
 
-          setState(() {
-            todaySchedules = fetchedSchedules;
-          });
-          print("Success to fetch schedules");
+          if (mounted) {
+            setState(() {
+              todaySchedules = fetchedSchedules;
+            });
+          }
+
+          print("✅ Success to fetch schedules home");
         } else {
-          print("Unexpected response format: ${response.body}");
+          print("⚠️ Unexpected response format: ${response.body}");
         }
       } else {
-        print("Failed to fetch schedules: ${response.body}");
+        print("❌ Failed to fetch schedules: ${response.body}");
       }
     } catch (e) {
-      print("Error occurred: $e");
+      print("❌ Error occurred: $e");
     }
   }
+
 
   @override
   Widget build(BuildContext context) {

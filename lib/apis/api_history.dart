@@ -4,12 +4,15 @@ import 'package:http/http.dart'
     as http; // Import HTTP package for making requests
 import 'package:intl/intl.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 Future<List<Map<String, dynamic>>> fetchhistorydata(
     String token, DateTime start, DateTime end) async {
+  final prefs = await SharedPreferences.getInstance();
+  final cabinetId = prefs.getString('selectedCabinetId')!;
   final baseUrl = dotenv.env['API_BASE_URL']!;
   final response = await http.post(
-    Uri.parse('http://$baseUrl/log/get'),
+    Uri.parse('http://$baseUrl/log/${cabinetId}/get'),
     headers: {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',

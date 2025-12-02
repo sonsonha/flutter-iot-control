@@ -13,7 +13,7 @@ class Chart extends StatefulWidget {
     required this.label,
   });
 
-  final String token;
+  final String token;          // hiện tại chưa dùng, nhưng giữ để tránh lỗi chỗ khác
   String label = "Humidity";
 
   @override
@@ -22,7 +22,8 @@ class Chart extends StatefulWidget {
 }
 
 class _ChartState extends State<Chart> {
-  final leftTitle = {
+  // Nhãn trục Y
+  final Map<int, String> leftTitle = const {
     0: '0',
     20: '20',
     40: '40',
@@ -33,53 +34,67 @@ class _ChartState extends State<Chart> {
 
   int time = 7;
 
-  Future<List<Map<String, dynamic>>> fetchData(
-      String token, String label, int time) async {
-    if (label == 'Humidity') {
-      return await fetchloghumidata(time);
+  Future<List<Map<String, dynamic>>> fetchData() {
+    // token hiện tại không dùng ở đây, nhưng vẫn giữ để tương thích
+    if (widget.label == 'Humidity') {
+      return fetchloghumidata(time);
     } else {
-      return await fetchlogtempdata(time);
+      return fetchlogtempdata(time);
     }
+  }
+
+  // nút chọn 7 / 30 / 90 ngày, có highlight ngày đang chọn
+  Widget _buildTimeButtons() {
+    Widget buildBtn(int value, String text) {
+      final bool isSelected = time == value;
+      return ElevatedButton(
+        onPressed: () {
+          if (time != value) {
+            setState(() {
+              time = value;
+            });
+          }
+        },
+        style: ElevatedButton.styleFrom(
+          elevation: isSelected ? 2 : 0,
+          backgroundColor: isSelected
+              ? const Color.fromARGB(255, 17, 163, 212)
+              : Colors.white,
+          foregroundColor: isSelected ? Colors.white : Colors.black87,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(
+              color: const Color.fromARGB(255, 17, 163, 212)
+                  .withOpacity(isSelected ? 0.0 : 0.4),
+            ),
+          ),
+        ),
+        child: Text(text),
+      );
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: [
+        buildBtn(7, '7 Days'),
+        const SizedBox(width: 10),
+        buildBtn(30, '30 Days'),
+        const SizedBox(width: 10),
+        buildBtn(90, '90 Days'),
+      ],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<Map<String, dynamic>>>(
-      future: fetchData(widget.token, widget.label, time),
+      future: fetchData(),
       builder: (context, snapshot) {
-        Widget statusButtons = Row(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  time = 7;
-                });
-              },
-              child: const Text('7 Days'),
-            ),
-            const SizedBox(width: 10),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  time = 30;
-                });
-              },
-              child: const Text('30 Days'),
-            ),
-            const SizedBox(width: 10),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  time = 90;
-                });
-              },
-              child: const Text('90 Days'),
-            ),
-          ],
-        );
+        final statusButtons = _buildTimeButtons();
+
+        // Loading
         if (snapshot.connectionState == ConnectionState.waiting) {
-          // return const Center(child: CircularProgressIndicator());
           return CustomCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -100,24 +115,37 @@ class _ChartState extends State<Chart> {
             ),
           );
         }
-        // Hiển thị loading
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Column(
-            children: [
-              Text(
-                widget.label == 'Humidity'
-                    ? 'Humidity (%)'
-                    : 'Temperature (°C)',
-                style:
-                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 20),
-              statusButtons,
-              const SizedBox(height: 20),
-              const Center(child: CircularProgressIndicator()),
-            ],
+
+        // Lỗi
+        if (snapshot.hasError) {
+          return CustomCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.label == 'Humidity'
+                      ? 'Humidity (%)'
+                      : 'Temperature (°C)',
+                  style: const TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 20),
+                statusButtons,
+                const SizedBox(height: 20),
+                Text(
+                  'Error loading data',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.red.shade400,
+                  ),
+                ),
+                SizedBox(height: MediaQuery.of(context).size.width * 0.12),
+              ],
+            ),
           );
         }
+
+        // Không có dữ liệu
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return CustomCard(
             child: Column(
@@ -144,30 +172,36 @@ class _ChartState extends State<Chart> {
             ),
           );
         }
-        // Tạo danh sách FlSpot từ dữ liệu
-        List<FlSpot> spots = snapshot.data!.asMap().entries.map((entry) {
-          int index = entry.key;
-          Map<String, dynamic> dataPoint = entry.value;
 
-          // Lấy FlSpot từ dữ liệu
-          FlSpot spot = dataPoint['spot'];
+        // Tạo list FlSpot từ data
+        final List<Map<String, dynamic>> rawData = snapshot.data!;
+        final List<FlSpot> spots = rawData.asMap().entries.map((entry) {
+          final int index = entry.key;
+          final Map<String, dynamic> dataPoint = entry.value;
+          final FlSpot originalSpot = dataPoint['spot'];
 
-          // Truy xuất giá trị x và y từ FlSpot
-          double xValue = index.toDouble();
-
-          double yValue = spot.y;
+          // dùng index làm x để spacing đều, y giữ nguyên
+          final double xValue = index.toDouble();
+          final double yValue = originalSpot.y;
 
           return FlSpot(xValue, yValue);
         }).toList();
-        // Kiểm tra dữ liệu invalid (NaN hoặc Infinity)
+
+        // Dữ liệu lỗi
         if (spots.any((spot) => spot.y.isNaN || spot.y.isInfinite)) {
           return const Center(child: Text('Invalid data points'));
         }
 
-        // Tính maxX và maxY từ dữ liệu thực tế
-        double maxX = spots.map((spot) => spot.x).reduce(max);
-        double minX = spots.map((spot) => spot.x).reduce(min);
-        double maxY = spots.map((spot) => spot.y).reduce(max) + 10;
+        // Tính range
+        final double maxX =
+            spots.map((spot) => spot.x).reduce((a, b) => max(a, b));
+        final double minX =
+            spots.map((spot) => spot.x).reduce((a, b) => min(a, b));
+        double maxY =
+            spots.map((spot) => spot.y).reduce((a, b) => max(a, b)) + 10;
+
+        // clamp maxY tối thiểu 20
+        if (maxY < 20) maxY = 20;
 
         return CustomCard(
           child: Column(
@@ -197,10 +231,10 @@ class _ChartState extends State<Chart> {
                           reservedSize: 20,
                           interval: 1,
                           getTitlesWidget: (double value, TitleMeta meta) {
-                            int index = value.toInt();
-                            if (index < snapshot.data!.length) {
-                              DateTime date = snapshot.data![index]['date'];
-                              String formattedDate =
+                            final int index = value.toInt();
+                            if (index < rawData.length) {
+                              final DateTime date = rawData[index]['date'];
+                              final String formattedDate =
                                   '${date.day}-${date.month}';
 
                               return SideTitleWidget(
@@ -211,40 +245,41 @@ class _ChartState extends State<Chart> {
                                   style: TextStyle(
                                     fontSize:
                                         Responsive.isMobile(context) ? 9 : 12,
-                                    color: const Color.fromARGB(255, 0, 0, 0),
+                                    color: Colors.black87,
                                   ),
                                 ),
                               );
-                            } else {
-                              return const SizedBox();
                             }
+                            return const SizedBox();
                           },
                         ),
                       ),
                       rightTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false)),
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
                       topTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false)),
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
                       leftTitles: AxisTitles(
                         sideTitles: SideTitles(
-                          getTitlesWidget: (double value, TitleMeta meta) {
-                            if (value == maxY) {
-                              return const SizedBox(); // Trả về widget rỗng nếu là maxY
-                            }
-                            return leftTitle[value.toInt()] != null
-                                ? Text(
-                                    leftTitle[value.toInt()]!,
-                                    style: TextStyle(
-                                      fontSize:
-                                          Responsive.isMobile(context) ? 9 : 12,
-                                      color: const Color.fromARGB(255, 0, 0, 0),
-                                    ),
-                                  )
-                                : const SizedBox();
-                          },
                           showTitles: true,
                           interval: 20,
                           reservedSize: 40,
+                          getTitlesWidget: (double value, TitleMeta meta) {
+                            if (value == maxY) {
+                              return const SizedBox();
+                            }
+                            final label = leftTitle[value.toInt()];
+                            if (label == null) return const SizedBox();
+                            return Text(
+                              label,
+                              style: TextStyle(
+                                fontSize:
+                                    Responsive.isMobile(context) ? 9 : 12,
+                                color: Colors.black87,
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ),
@@ -259,18 +294,19 @@ class _ChartState extends State<Chart> {
                         barWidth: 2.5,
                         isStrokeCapRound: true,
                         belowBarData: BarAreaData(
+                          show: true,
                           gradient: LinearGradient(
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                             colors: [
-                              // ignore: deprecated_member_use
-                              Theme.of(context).primaryColor.withOpacity(0.5),
+                              Theme.of(context)
+                                  .primaryColor
+                                  .withOpacity(0.35),
                               widget.label == 'Humidity'
                                   ? const Color.fromARGB(87, 1, 35, 255)
                                   : const Color.fromARGB(86, 255, 1, 1),
                             ],
                           ),
-                          show: true,
                         ),
                         dotData: FlDotData(
                           show: true,
@@ -290,9 +326,9 @@ class _ChartState extends State<Chart> {
                       ),
                     ],
                     minX: minX,
-                    maxX: maxX, // Đảm bảo maxX chính xác
+                    maxX: maxX,
                     minY: 0,
-                    maxY: maxY, // Đảm bảo maxY chính xác
+                    maxY: maxY,
                   ),
                 ),
               ),

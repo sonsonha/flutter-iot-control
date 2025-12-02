@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:frontend_daktmt/custom_card.dart';
 import 'package:frontend_daktmt/nav_bar/nav_bar_left.dart';
-// import 'package:frontend_daktmt/pages/setting/ble.dart';
 import 'package:frontend_daktmt/pages/upgrade/upgrade.dart';
 import 'package:frontend_daktmt/responsive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -21,309 +20,165 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String selectedUpdate = 'Off';
   String selectedNoitification = 'Off';
   String? token;
+
   @override
   void initState() {
     super.initState();
-    _loadToken(); // Load token when the screen initializes
+    _loadToken();
   }
 
-  // Method to load token from SharedPreferences
   Future<void> _loadToken() async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      token = prefs.getString('accessToken');
-    });
+    token = prefs.getString('accessToken');
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final isMobile = Responsive.isMobile(context);
-    final screenWidth = MediaQuery.of(context).size.width;
-    return Scaffold(
-      drawer: const Navbar_left(),
-      appBar: AppBar(
-        title: const Text('Settings'),
+  // ================= TITLE BAR =================
+  Widget _buildSettingsTitleBar() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1E88E5), Color(0xFF42A5F5)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: const [
+          BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 3)),
+        ],
       ),
-      body: Container(
-        decoration: backgound_Color(),
-        padding: isMobile
-            ? const EdgeInsets.fromLTRB(10, 10, 10, 170)
-            : EdgeInsets.fromLTRB(screenWidth * 0.3, 20, screenWidth * 0.3, 80),
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.settings, color: Colors.white, size: 30),
+          SizedBox(width: 12),
+          Text(
+            'SETTINGS PAGE',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ================= SETTINGS CARD =================
+  Widget _buildSettingsCard() {
+    return CustomCard(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Container chứa các cài đặt
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 30.0, vertical: 25.0),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16.0), // Bo tròn góc
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 6.0,
-                    offset: Offset(0, 3), // Độ lệch bóng
+            _buildRow(
+              icon: Icons.brightness_6,
+              color: Colors.orangeAccent,
+              title: 'Theme',
+              value: selectedTheme,
+              onTap: () {
+                setState(() {
+                  selectedTheme =
+                      (selectedTheme == 'Light') ? 'Dark' : 'Light';
+                });
+              },
+            ),
+            divider_set(),
+
+            _buildRow(
+              icon: Icons.language,
+              color: Colors.redAccent,
+              title: 'Language',
+              value: selectedLanguage,
+              onTap: () {
+                setState(() {
+                  selectedLanguage =
+                      (selectedLanguage == 'English') ? 'VietNamese' : 'English';
+                });
+              },
+            ),
+            divider_set(),
+
+            _buildRow(
+              icon: Icons.network_check,
+              color: Colors.blue,
+              title: 'Connection',
+              value: selectedConnection,
+              onTap: () {
+                setState(() {
+                  selectedConnection =
+                      (selectedConnection == 'MQTT') ? 'WebSocket' : 'MQTT';
+                });
+              },
+            ),
+            divider_set(),
+
+            _buildRow(
+              icon: Icons.notifications_active,
+              color: Colors.deepPurple,
+              title: 'Notification',
+              value: selectedNoitification,
+              onTap: () {
+                setState(() {
+                  selectedNoitification =
+                      (selectedNoitification == 'Off') ? 'On' : 'Off';
+                });
+              },
+            ),
+            divider_set(),
+
+            _buildArrowRow(
+              icon: Icons.system_update,
+              color: Colors.green,
+              title: 'Software Update',
+              onTap: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('You are on the latest version'),
                   ),
-                ],
-                border: Border.all(color: Colors.grey.shade300), // Đường viền
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Row(
-                        // Thay đổi đây để thêm icon vào trước text
-                        children: [
-                          Icon(
-                            Icons.brightness_6,
-                            color: Color.fromARGB(255, 145, 145,
-                                145), // Chỉnh màu biểu tượng tại đây
-                          ), // Biểu tượng trước văn bản
-                          SizedBox(
-                              width:
-                                  8.0), // Khoảng cách giữa biểu tượng và văn bản
-                          Text('Theme'),
-                        ],
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            selectedTheme =
-                                (selectedTheme == 'Light') ? 'Dark' : 'Light';
-                          });
-                        },
-                        child: Container(
-                          width: 120,
-                          height: 40,
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          alignment: Alignment.center,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                selectedTheme,
-                                textAlign: TextAlign.center,
-                              ),
-                              const Icon(Icons.arrow_forward_ios),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
+                );
+              },
+            ),
+            divider_set(),
+
+            _buildArrowRow(
+              icon: Icons.update,
+              color: Colors.pink,
+              title: 'Upgrade Account',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const UpgradePage(),
                   ),
-                  divider_set(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Row(
-                        // Thay đổi đây để thêm icon vào trước text
-                        children: [
-                          Icon(
-                            Icons.language,
-                            color: Color.fromARGB(255, 230, 112,
-                                112), // Chỉnh màu biểu tượng tại đây
-                          ), // Biểu tượng trước văn bản
-                          SizedBox(
-                              width:
-                                  8.0), // Khoảng cách giữa biểu tượng và văn bản
-                          Text('Language'),
-                        ],
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            selectedLanguage = (selectedLanguage == 'English')
-                                ? 'VietNamese'
-                                : 'English';
-                          });
-                        },
-                        child: Container(
-                          width: 120,
-                          height: 40,
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          alignment: Alignment.center,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                selectedLanguage,
-                                textAlign: TextAlign.center,
-                              ),
-                              const Icon(Icons.arrow_forward_ios),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
+                );
+              },
+            ),
+
+            const SizedBox(height: 24),
+
+            Center(
+              child: ElevatedButton(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Settings saved')),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  divider_set(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Row(
-                        // Thay đổi đây để thêm icon vào trước text
-                        children: [
-                          Icon(
-                            Icons.network_check,
-                            color: Colors.blue, // Chỉnh màu biểu tượng tại đây
-                          ), // Biểu tượng trước văn bản
-                          SizedBox(
-                              width:
-                                  8.0), // Khoảng cách giữa biểu tượng và văn bản
-                          Text('Connection'),
-                        ],
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            selectedConnection = (selectedConnection == 'MQTT')
-                                ? 'WebSocket'
-                                : 'MQTT';
-                          });
-                        },
-                        child: Container(
-                          width: 120,
-                          height: 40,
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          alignment: Alignment.center,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                selectedConnection,
-                                textAlign: TextAlign.center,
-                              ),
-                              const Icon(Icons.arrow_forward_ios),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  divider_set(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Row(
-                        // Thay đổi đây để thêm icon vào trước text
-                        children: [
-                          Icon(
-                            Icons.notification_add,
-                            color: Color.fromARGB(255, 48, 48,
-                                48), // Chỉnh màu biểu tượng tại đây
-                          ), // Biểu tượng trước văn bản
-                          SizedBox(
-                              width:
-                                  8.0), // Khoảng cách giữa biểu tượng và văn bản
-                          Text('Noitification'),
-                        ],
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            selectedNoitification =
-                                (selectedNoitification == 'Off') ? 'On' : 'Off';
-                          });
-                        },
-                        child: Container(
-                          width: 120,
-                          height: 40,
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          alignment: Alignment.center,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                selectedNoitification,
-                                textAlign: TextAlign.center,
-                              ),
-                              const Icon(Icons.arrow_forward_ios),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  divider_set(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Row(
-                        // Thay đổi đây để thêm icon vào trước text
-                        children: [
-                          Icon(
-                            Icons.system_update,
-                            color: Color.fromARGB(255, 0, 255,
-                                64), // Chỉnh màu biểu tượng tại đây
-                          ), // Biểu tượng trước văn bản
-                          SizedBox(
-                              width:
-                                  8.0), // Khoảng cách giữa biểu tượng và văn bản
-                          Text('Software Update'),
-                        ],
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.arrow_forward_ios),
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('You are on the latest version'),
-                            ),
-                          );
-                          // Navigator.push(
-                          //   context,
-                          //   MaterialPageRoute(
-                          //       builder: (context) => const BleDevicePage()),
-                          // );
-                        },
-                      ),
-                    ],
-                  ),
-                  divider_set(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Row(
-                        // Thay đổi đây để thêm icon vào trước text
-                        children: [
-                          Icon(
-                            Icons.update,
-                            color: Color.fromARGB(255, 255, 0,
-                                212), // Chỉnh màu biểu tượng tại đây
-                          ), // Biểu tượng trước văn bản
-                          SizedBox(
-                              width:
-                                  8.0), // Khoảng cách giữa biểu tượng và văn bản
-                          Text('Upgrade Account'),
-                        ],
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.arrow_forward_ios),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => const UpgradePage()),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  Center(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Settings saved')),
-                        );
-                      },
-                      child: const Text('Save Settings'),
-                    ),
-                  ),
-                ],
+                ),
+                child: const Text(
+                  'Save Settings',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
           ],
@@ -332,15 +187,136 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ignore: non_constant_identifier_names
+  // ================= ROW WITH VALUE (FULL TAP) =================
+  Widget _buildRow({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String value,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          children: [
+            Icon(icon, color: color),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.black54,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ================= ROW WITH ARROW (FULL TAP) =================
+  Widget _buildArrowRow({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          children: [
+            Icon(icon, color: color),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ================= BUILD =================
+  @override
+  Widget build(BuildContext context) {
+    final isDesktop = Responsive.isDesktop(context);
+
+    return Scaffold(
+      drawer: const Navbar_left(),
+      body: Stack(
+        children: [
+          Container(decoration: backgound_Color()),
+          const navbarleft_set(),
+
+          SafeArea(
+            child: isDesktop
+                ? Row(
+                    children: [
+                      SizedBox(width: 260, child: const Navbar_left()),
+                      const VerticalDivider(width: 1, thickness: 1),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            children: [
+                              _buildSettingsTitleBar(),
+                              const SizedBox(height: 16),
+                              Expanded(child: _buildSettingsCard()),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        const SizedBox(
+                          height:
+                              70, // 👈 chừa khoảng trống để không che nút 3 gạch
+                        ),
+                        _buildSettingsTitleBar(),
+                        const SizedBox(height: 16),
+                        Expanded(child: _buildSettingsCard()),
+                      ],
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Padding divider_set() {
     return const Padding(
-      padding: EdgeInsets.symmetric(vertical: 10),
-      child: Divider(
-        color: Colors.grey,
-        height: 0.2,
-        thickness: 0.3,
-      ),
+      padding: EdgeInsets.symmetric(vertical: 8),
+      child: Divider(thickness: 0.4),
     );
   }
 }
